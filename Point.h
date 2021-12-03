@@ -4,10 +4,10 @@ class Point
 {
 
     public:
-        Point(float x, float y, float height);
-
-        float x;
-        float y;
+        Point(int x, int y, float height);
+        Point();
+        int x;
+        int y;
         float height;
         
 };

@@ -4,10 +4,14 @@ class Map
 {
 
     private:
-        Point **points;
+        Point **_points;
+        int _height;
+        int _width;
+        float _pointDistance;
     public:
         Map();
-        void SetPoint(int x, int y, int z);
-        Point GetPoint(int x, int y);
+        void ReadFile(string fileName);
+        //takes a float x and y and returns the points surrounding that point
+        void GetFourPoints(float x, float y, Point* fourOut);
         
 };
