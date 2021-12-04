@@ -12,6 +12,8 @@ class Map
         Map();
         void ReadFile(string fileName);
         //takes a float x and y and returns the points surrounding that point
-        void GetFourPoints(float x, float y, Point* fourOut);
+        float GetHeight(float x, float y);
+
+        float GetHeight(int x, int y);
         
 };

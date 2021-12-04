@@ -9,25 +9,33 @@ using namespace std;
 Map::Map(){
 
 }
+
+float Map::GetHeight(int x, int y){
+    return _points[y][x].height;
+}
 //takes a float x and y and returns the points surrounding that point
-//the returned points are clockwise, dL, uL, uR, d,R
+//the returned points are clockwise, dL, uL, uR, dR
 //returns if any of the points or OOB
-void Map::GetFourPoints(float x, float y, Point* fourOut){
+float Map::GetHeight(float x, float y){
     int startX = floor(x/_pointDistance);
     int startY = floor(y/_pointDistance);
 
     if(startX < 0)
-        return;
+        return NAN;
     if(startX >= _width)
-        return;
+        return NAN;
     if(startY < 0)
-        return;
+        return NAN;
     if(startY >= _height)
-        return;
-    fourOut[0] = _points[startY][startX];
-    fourOut[1] = _points[startY - 1][startX];
-    fourOut[2] = _points[startY - 1][startX + 1];
-    fourOut[3] = _points[startY][startX + 1];
+        return NAN;
+    float xPoint = x - startX;
+    float yPoint = y - startY;
+    return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(_points[startY][startX].height) + 
+            (_pointDistance)*(_pointDistance - yPoint)*(_points[startY][startX+1].height) +
+            (_pointDistance - xPoint)*(_pointDistance)*(_points[startY-1][startX].height) +
+            (_pointDistance)*(_pointDistance)*(_points[startY-1][startX+1].height);
+
+    
 }
 //takes a file name and reads the map into memory
 //must be in order of

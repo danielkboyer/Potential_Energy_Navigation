@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include <string>
 #include <math.h>
-
+#include <CPU_UTIL.h>
 void Usage(char* prog_name);
-void *CountNumbers(void* rank);
 
 int main(int argc, char* argv[]){
+
+	Agent initial = *new Agent(0,0,0,0,0,nullptr);
+
+	
+	CPU_UTIL::AgentStep(initial);
 
 	return 0;
 
