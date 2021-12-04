@@ -2,9 +2,9 @@
 #include "Agent.h"
 #include "math.h"
 
-    
-Agent::Agent(float direction, float positionX, float positionY, float height, float velocity, float time, int parentId,bool pruned = false):direction(direction),positionX(positionX),positionY(positionY),
-height(height),velocity(velocity),parentId(parentId),time(time),pruned(pruned){
+Agent::Agent(){}
+Agent::Agent(float direction, float positionX, float positionY, float height, float velocity, float time, int Id, int parentId,bool pruned = false):direction(direction),positionX(positionX),positionY(positionY),
+height(height),velocity(velocity),parentId(parentId),time(time),pruned(pruned),Id(Id){
 }
 
 float Agent::DistanceFrom(float x, float y){
