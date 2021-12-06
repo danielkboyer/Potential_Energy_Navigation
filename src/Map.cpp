@@ -10,6 +10,9 @@ Map::Map(){
 
 }
 
+float Map::GetPointDistance(){
+    return _pointDistance;
+}
 float Map::GetHeight(int x, int y){
     return *(new float(_points[y][x].height));
 }

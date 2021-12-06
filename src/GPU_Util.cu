@@ -51,11 +51,12 @@ void GPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
     }
 }
 //Must have a non null out agent
+__global__
 void GPU_Util::AgentStep(Agent in, Agent out, float newDirection, Properties properties, Map map){
     AgentTravel(in,out,newDirection,properties,map);
     AgentHeight(in,out,newDirection,properties,map);
 }
-
+__device__
 void GPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
     out.positionX = in.positionX + cos(newDirection) * properties.travelDistance;
     out.positionY = in.positionY + sin(newDirection) * properties.travelDistance;
@@ -64,6 +65,7 @@ void GPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties p
     
 }
 //must have out positionX and positionY populated
+__device__
 void GPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
 
     out.height = map.GetHeight(out.positionX,out.positionY);

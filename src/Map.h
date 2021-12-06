@@ -16,5 +16,7 @@ class Map
         float GetHeight(float x, float y);
 
         float GetHeight(int x, int y);
+
+        float GetPointDistance();
         
 };
