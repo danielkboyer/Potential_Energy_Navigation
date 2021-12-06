@@ -64,6 +64,7 @@ int main(int argc, char* argv[]){
 			// get stats for prunning
 			// have barrier for threads and only do on thread 1
 			int amountToPrune = aLength - maxAgentCount + 100;
+			printf("\namount to prune: %i\n",amountToPrune);
 			long sampleRate = 300;
 			Stat* stat = new Stat();
 			utility->CalcAvg(a, properties, sampleRate, *stat, aLength, long (amountToPrune));

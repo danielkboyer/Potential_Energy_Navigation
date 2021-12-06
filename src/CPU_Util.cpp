@@ -6,21 +6,29 @@
 #include "CPU_Util.h"
 //this will be done in serial
 void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
-        
+    
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
-    for(int i=0;i<sampleRate;i++)
+    printf("\n randArrayIDs:");
+    for(int i=0;i<sampleRate;i++){
         randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to 99
+        printf("  %i  ",randArrayIDs[i]);
+    }
+
     // make arrays of agent energies and distances for averaging
     float randDistances[sampleRate];
     float randEnergies[sampleRate];
     for (int i=0;i<sampleRate;i++){
         randDistances[i] = agents[randArrayIDs[i]].DistanceFrom(properties.agentStartX,properties.agentStartY);
         randEnergies[i] = agents[randArrayIDs[i]].Energy(properties.gravity,properties.friction);
+        printf("Rand Distances %d: %f\n",i,randDistances[i]);
+        printf("randEnergies %d: %f\n",i,randEnergies[i]);
+        printf("i, for agents %d: x  %f  y  %f\n",i,agents[randArrayIDs[i]].positionX, agents[randArrayIDs[i]].positionY);
+
     }
     // get average distance and average energy for each random ID
     for (int i=0;i<sampleRate;i++){
-        printf("Rand Distances %d: %f\n",i,out.d_avg);
+        //printf("Rand Distances %d: %f\n",i,out.d_avg);
         out.d_avg += randDistances[i]/(float(sampleRate));
         out.E_avg += randEnergies[i]/(float(sampleRate));
     }
@@ -29,7 +37,7 @@ void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
     float avg_normalized = 0;
     for (int i=0;i<sampleRate;i++){
         //TODO: out.d_avg/out.d_avg equals 1 right?
-        normalized[i] = sqrt(randDistances[i]*randDistances[i]/out.d_avg/out.d_avg + randEnergies[i]*randEnergies[i]/out.E_avg/out.E_avg);
+        normalized[i] = sqrt(randDistances[i]*randDistances[i]/(out.d_avg*out.d_avg) + randEnergies[i]*randEnergies[i]/(out.E_avg*out.E_avg));
         avg_normalized +=normalized[i];
     }
     avg_normalized = avg_normalized/float(sampleRate);
