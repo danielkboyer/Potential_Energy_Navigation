@@ -57,12 +57,29 @@ int main(int argc, char* argv[]){
 
 	while(aLength > 0){
 
-		printf("ALength: %ld\n",aLength);
-		int prunedAmount = 0;	
+		printf("\nALength: %ld\n",aLength);
+		long prunedAmount = 0;	
 		if(aLength > maxAgentCount){
+			printf("ALength %ld>%ld \n",aLength,maxAgentCount);
+			// get stats for prunning
+			// have barrier for threads and only do on thread 1
+			int amountToPrune = aLength - maxAgentCount + 100;
+			long sampleRate = 300;
+			Stat* stat = new Stat();
+			utility->CalcAvg(a, properties, sampleRate, *stat, aLength, long (amountToPrune));
+			printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
 			//prune here
+			for(int x = 0;x<aLength;x++){
+			
+				utility->CheckPrune(a[x], properties,*stat);
+				// function to count how mant were pruned, this will change for implimentation
+				if (a[x].pruned) prunedAmount+=1;
+			}
+			printf("Pruned Amount %ld\n",prunedAmount);
 
 		}
+
+
 		int bLength = aLength - prunedAmount;
 		Agent* b = new Agent[bLength];
 		int currentBIndex = 0;

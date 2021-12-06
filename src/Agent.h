@@ -19,4 +19,5 @@ class Agent
         bool pruned;
 
         float DistanceFrom(float x, float y);
+        float Energy(float gravity, float friction);
 };

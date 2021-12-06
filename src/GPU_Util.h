@@ -1,6 +1,6 @@
 #pragma once
 #include "Util.h"
-class CPU_Util: public Util
+class GPU_Util: public Util
 {
     public:
         void AgentStep(Agent in, Agent out, float newDirection, Properties properties, Map map);

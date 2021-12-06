@@ -3,9 +3,9 @@
 #include "Properties.h"
 #include "math.h"
 #include "Util.h"
-#include "CPU_Util.h"
+#include "GPU_Util.h"
 //this will be done in serial
-void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
+void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
         
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
@@ -42,7 +42,7 @@ void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
     out.offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*5.0*stdDeviation + stdDeviation/10.0;
 }
 // this is called for all agents to see if they are pruned
-void CPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
+void GPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
     if ((out.DistanceFrom(properties.agentStartX,properties.agentStartY)/stat.d_avg + out.Energy(properties.gravity, properties.friction)/stat.E_avg) - stat.offset <=0) {
         out.pruned = true;
         // also do we need a counter for the total number of points pruned?
@@ -51,12 +51,12 @@ void CPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
     }
 }
 //Must have a non null out agent
-void CPU_Util::AgentStep(Agent in, Agent out, float newDirection, Properties properties, Map map){
+void GPU_Util::AgentStep(Agent in, Agent out, float newDirection, Properties properties, Map map){
     AgentTravel(in,out,newDirection,properties,map);
     AgentHeight(in,out,newDirection,properties,map);
 }
 
-void CPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
+void GPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
     out.positionX = in.positionX + cos(newDirection) * properties.travelDistance;
     out.positionY = in.positionY + sin(newDirection) * properties.travelDistance;
     out.time += properties.travelDistance/out.velocity;
@@ -64,7 +64,7 @@ void CPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties p
     
 }
 //must have out positionX and positionY populated
-void CPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
+void GPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
 
     out.height = map.GetHeight(out.positionX,out.positionY);
     

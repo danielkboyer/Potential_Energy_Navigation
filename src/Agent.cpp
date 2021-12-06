@@ -12,3 +12,6 @@ float Agent::DistanceFrom(float x, float y){
     return sqrt((x-positionX)*(x-positionX) + (y-positionY)*(y-positionY));
 }
         
+float Agent::Energy(float gravity, float friction){
+    return ((velocity)*(velocity)/2 + (height)*(gravity))*friction;
+}    

@@ -10,9 +10,9 @@ CFLAGS = -Wall -g
 # 	$(CC) -c $(SDIR)
 # edit : $(ODIR)/%.o
 $(OUT)/run_me : $(ODIR)/cpu_main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
-       $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o
+       $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o
 	$(CC) -o $(OUT)/run_me $(ODIR)/cpu_main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
-        $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o
+        $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o
 
 $(ODIR)/cpu_main.o : $(SDIR)/cpu_main.cpp $(SDIR)/Agent.h $(SDIR)/Util.h $(SDIR)/FileWriter.h $(SDIR)/CPU_Util.h
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/cpu_main.cpp  
@@ -30,6 +30,8 @@ $(ODIR)/CPU_Util.o : $(SDIR)/CPU_Util.cpp $(SDIR)/Agent.h $(SDIR)/Map.h $(SDIR)/
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/CPU_Util.cpp
 $(ODIR)/Agent.o : $(SDIR)/Agent.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Agent.cpp
+$(ODIR)/Stat.o : $(SDIR)/Stat.cpp
+	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Stat.cpp
 clean :
 	rm $(OUT)/run_me $(ODIR)/cpu_main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
-           $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o
+           $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o 
