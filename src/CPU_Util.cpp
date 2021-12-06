@@ -9,10 +9,10 @@ void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
     
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
-    printf("\n randArrayIDs:");
+    //printf("\n randArrayIDs:");
     for(int i=0;i<sampleRate;i++){
         randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to 99
-        printf("  %i  ",randArrayIDs[i]);
+        //printf("  %i  ",randArrayIDs[i]);
     }
 
     // make arrays of agent energies and distances for averaging
@@ -21,9 +21,9 @@ void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
     for (int i=0;i<sampleRate;i++){
         randDistances[i] = agents[randArrayIDs[i]].DistanceFrom(properties.agentStartX,properties.agentStartY);
         randEnergies[i] = agents[randArrayIDs[i]].Energy(properties.gravity,properties.friction);
-        printf("Rand Distances %d: %f\n",i,randDistances[i]);
-        printf("randEnergies %d: %f\n",i,randEnergies[i]);
-        printf("i, for agents %d: x  %f  y  %f\n",i,agents[randArrayIDs[i]].positionX, agents[randArrayIDs[i]].positionY);
+        //printf("Rand Distances %d: %f\n",i,randDistances[i]);
+        //printf("randEnergies %d: %f\n",i,randEnergies[i]);
+        //printf("i, for agents %d: x  %f  y  %f\n",i,agents[randArrayIDs[i]].positionX, agents[randArrayIDs[i]].positionY);
 
     }
     // get average distance and average energy for each random ID

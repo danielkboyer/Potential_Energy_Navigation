@@ -88,7 +88,9 @@ int main(int argc, char* argv[]){
 		int currentBIndex = 0;
 		for(int x = 0;x<aLength;x++){
 			if(!a[x].pruned){
-				b[currentBIndex++] = Agent(a[x]);
+				b[currentBIndex++] = a[x];
+				//b[currentBIndex-1].direction = 1000;
+				//printf("a %f, b %f\n",a[x],b[currentBIndex-1]);
 			}
 		}
 
@@ -107,9 +109,9 @@ int main(int argc, char* argv[]){
 			for(int y = 0;y<numberOfDirectionSpawn;y++){
 				float newDirection = b[x].direction - directionSpawnRadius/2 + directionSpawnRadius/(numberOfDirectionSpawn-1) * y;
 				//a[aIndex+y] = Agent();
-				a[aIndex+y] = Agent(utility->AgentStep(b[x],newDirection,properties,map));
+				a[aIndex+y] = utility->AgentStep(b[x],newDirection,properties,map);
 				
-				printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
+				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
 			}
 			
 			

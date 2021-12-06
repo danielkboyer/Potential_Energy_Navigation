@@ -25,9 +25,9 @@ float Map::GetHeight(float x, float y){
     //printf("StartX: %d , StartY: %d\n",startX,startY);
     if(startX < 0)
         return NAN;
-    if(startX >= _width)
+    if(startX +1 >= _width)
         return NAN;
-    if(startY < 0)
+    if(startY -1 < 0)
         return NAN;
     if(startY >= _height)
         return NAN;
