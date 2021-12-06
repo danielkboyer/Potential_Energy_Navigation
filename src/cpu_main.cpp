@@ -41,23 +41,23 @@ int main(int argc, char* argv[]){
 	map.ReadFile(fileName);
 
 	printf("Initializing %ld Starting Agents at (%d,%d)\n",startingCount,startingX,startingY);
-	Agent a[startingCount];
+	Agent* a = new Agent[startingCount];
 	long startAgentId = 0;
 	float radiusInterval = 2*M_PI/startingCount;
 	float currentDirection = 0;
 	float startingHeight = map.GetHeight(startingX,startingY);
 	printf("Starting height: %f\n",startingHeight);
 	for(int x = 0;x<startingCount;x++){
-		printf("Creating agent %d",x);
-		a[x] = *new Agent(currentDirection,startingX,startingY,startingHeight,startVelocity,0,x,-1,false);
+		a[x] = Agent(currentDirection,startingX,startingY,startingHeight,startVelocity,0,x,-1,false);
 		currentDirection+= radiusInterval;
 	}
-	printf("Initializing Utility");
+	printf("Initializing Utility\n");
 	Util *utility = new CPU_Util();
 	long aLength = startingCount;
+
 	while(aLength > 0){
 
-		
+		printf("ALength: %ld\n",aLength);
 		int prunedAmount = 0;	
 		if(aLength > maxAgentCount){
 			//prune here
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]){
 		int currentBIndex = 0;
 		for(int x = 0;x<aLength;x++){
 			if(!a[x].pruned){
-				b[currentBIndex++] = *new Agent(a[x]);
+				b[currentBIndex++] = Agent(a[x]);
 
 			}
 		}
@@ -81,18 +81,18 @@ int main(int argc, char* argv[]){
 
 		delete[] a;
 		aLength = bLength*numberOfDirectionSpawn;
-		Agent* a = new Agent[aLength];
+		a = new Agent[aLength];
 		for(int x = 0;x<bLength;x++){
 			int aIndex = x*numberOfDirectionSpawn;
 			for(int y = 0;y<numberOfDirectionSpawn;y++){
 				float newDirection = b[x].direction - directionSpawnRadius/2 + directionSpawnRadius/(numberOfDirectionSpawn-1) * y;
-				a[aIndex+y] = *new Agent();
+				a[aIndex+y] = Agent();
 				utility->AgentStep(b[x],a[aIndex+y],newDirection,properties,map);
 			}
 			
 			
 		}
-
+		delete[] b;
 		
 
 

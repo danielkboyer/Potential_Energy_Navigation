@@ -76,7 +76,7 @@ void Map::ReadFile(string fileName){
             }
             float z = stof(line);
             //printf("Creating point at (%d,%d)",currentX,currentY);
-            _points[currentY][currentX] = *new Point(currentX,currentY,z);
+            _points[currentY][currentX] = Point(currentX,currentY,z);
             
             currentX++;
     }
