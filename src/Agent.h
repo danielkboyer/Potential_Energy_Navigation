@@ -6,6 +6,7 @@ class Agent
     public:
         Agent(float direction, float positionX, float positionY, float height, float velocity, float time, int Id, int parentId,bool pruned);
         Agent();
+   
         void Set(float direction, float positionX, float positionY, float height, float velocity, float time, int Id, int parentId,bool pruned = false);
         float direction;
         float positionX;

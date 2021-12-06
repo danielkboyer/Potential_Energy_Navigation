@@ -95,7 +95,7 @@ int main(int argc, char* argv[]){
 		//Write to file here
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;
-
+		
 		delete[] a;
 		aLength = bLength*numberOfDirectionSpawn;
 		a = new Agent[aLength];

@@ -22,7 +22,7 @@ float Map::GetHeight(int x, int y){
 float Map::GetHeight(float x, float y){
     int startX = floor(x/_pointDistance);
     int startY = floor(y/_pointDistance);
-    //printf("StartX: %d , StartY: %d",startX,startY);
+    //printf("StartX: %d , StartY: %d\n",startX,startY);
     if(startX < 0)
         return NAN;
     if(startX >= _width)
@@ -31,8 +31,10 @@ float Map::GetHeight(float x, float y){
         return NAN;
     if(startY >= _height)
         return NAN;
-    float xPoint = x - startX;
-    float yPoint = y - startY;
+    //printf("x %f, y %f\n",x/_pointDistance,y/_pointDistance);
+    float xPoint = x/_pointDistance - startX;
+    float yPoint = y/_pointDistance - startY;
+    //printf("yPoint %f, xPoint %f\n",yPoint,xPoint);
     return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(_points[startY][startX].height) + 
             (_pointDistance)*(_pointDistance - yPoint)*(_points[startY][startX+1].height) +
             (_pointDistance - xPoint)*(_pointDistance)*(_points[startY-1][startX].height) +

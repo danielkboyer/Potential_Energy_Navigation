@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
 	//Initialize properties
 	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance());
 
-	printf("Initializing %ld Starting Agents at (%d,%d)\n",startingCount,startingX,startingY);
+	printf("Initializing %ld Starting Agents at (%d,%d), v=%f\n",startingCount,startingX,startingY,startVelocity);
 	Agent* a = new Agent[startingCount];
 	long startAgentId = 0;
 	float radiusInterval = 2*M_PI/startingCount;
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
 				if (a[x].pruned) prunedAmount+=1;
 			}
 			printf("Pruned Amount %ld\n",prunedAmount);
-
+			delete stat;
 		}
 
 
@@ -89,7 +89,6 @@ int main(int argc, char* argv[]){
 		for(int x = 0;x<aLength;x++){
 			if(!a[x].pruned){
 				b[currentBIndex++] = Agent(a[x]);
-
 			}
 		}
 
@@ -103,11 +102,14 @@ int main(int argc, char* argv[]){
 		aLength = bLength*numberOfDirectionSpawn;
 		a = new Agent[aLength];
 		for(int x = 0;x<bLength;x++){
+			
 			int aIndex = x*numberOfDirectionSpawn;
 			for(int y = 0;y<numberOfDirectionSpawn;y++){
 				float newDirection = b[x].direction - directionSpawnRadius/2 + directionSpawnRadius/(numberOfDirectionSpawn-1) * y;
-				a[aIndex+y] = Agent();
-				utility->AgentStep(b[x],a[aIndex+y],newDirection,properties,map);
+				//a[aIndex+y] = Agent();
+				a[aIndex+y] = Agent(utility->AgentStep(b[x],newDirection,properties,map));
+				
+				printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
 			}
 			
 			
