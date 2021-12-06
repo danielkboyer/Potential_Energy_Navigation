@@ -53,12 +53,28 @@ int main(int argc, char* argv[]){
 		a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,false);
 		currentDirection+= radiusInterval;
 	}
+	
 	printf("Initializing Utility\n");
 	Util *utility = new CPU_Util();
 	long aLength = startingCount;
 
+	int loopAmount = 0;
 	while(aLength > 0){
 
+
+		if(loopAmount > 0){
+			printf("\n");
+			for(int x = 0;x<aLength;x++){
+
+		//printf("Agent direction V2 %f, PositionX: %f\n",a[x].direction,a[x].positionX);
+		}
+		}
+		if(loopAmount == 25){
+			
+		return 0;
+		}
+
+		
 		printf("\nALength: %ld\n",aLength);
 		long prunedAmount = 0;	
 		if(aLength > maxAgentCount){
@@ -75,13 +91,16 @@ int main(int argc, char* argv[]){
 			for(int x = 0;x<aLength;x++){
 			
 				utility->CheckPrune(a[x], properties,*stat);
-				// function to count how mant were pruned, this will change for implimentation
-				if (a[x].pruned) prunedAmount+=1;
 			}
-			printf("Pruned Amount %ld\n",prunedAmount);
 			delete stat;
 		}
 
+		// function to count how mant were pruned, this will change for implimentation
+		for(int x = 0;x<aLength;x++){ 
+			if(a[x].pruned==true) {prunedAmount+=1;
+			}
+		}
+		printf("Pruned Amount %ld\n",prunedAmount);
 
 		int bLength = aLength - prunedAmount;
 		Agent* b = new Agent[bLength];
@@ -93,7 +112,7 @@ int main(int argc, char* argv[]){
 				//printf("a %f, b %f\n",a[x],b[currentBIndex-1]);
 			}
 		}
-
+		
 
 		
 		//Write to file here
@@ -116,8 +135,9 @@ int main(int argc, char* argv[]){
 			
 			
 		}
-		delete[] b;
 		
+		delete[] b;
+		loopAmount++;
 
 
 	}

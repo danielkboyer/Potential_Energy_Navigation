@@ -62,8 +62,9 @@ void CPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
 Agent CPU_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
     //printf("Before\n");
     Agent out;
+    out.pruned = false;
     //printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
-     
+    
     out = AgentTravel(in,out,newDirection,properties,map);
     //printf("After %f, %f, %f, %f\n",out.positionX,out.positionY,out.time,out.direction);
     out = AgentHeight(in,out,newDirection,properties,map);
@@ -76,7 +77,6 @@ Agent CPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties 
     out.positionX = in.positionX + cos(newDirection) * properties.travelDistance;
     out.positionY = in.positionY + sin(newDirection) * properties.travelDistance;
     //printf("Agent position %f,%f\n",out->positionX,out->positionY);
-    out.time += properties.travelDistance/out.velocity;
     out.direction = newDirection;
     return out;
     
@@ -85,16 +85,18 @@ Agent CPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties 
 Agent CPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
     
     out.height = map.GetHeight(out.positionX,out.positionY);
-    if((2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) < 0){
-        printf("InHeight %f, InVelocity: %f\n",in.height,in.velocity);
-        printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
+    if(isnan(out.height) || (2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) < 0){
+        //printf("InHeight %f, InVelocity: %f\n",in.height,in.velocity);
+        //printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
      
-        printf("Less than zero\n");
+        //printf("Less than zero\n");
         out.pruned = true;
+        return out;
     }
     
 
     out.velocity = sqrt(2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) * properties.friction;
+    out.time += properties.travelDistance/out.velocity;
     //printf("InHeight %f, InVelocity: %f\n",in.height,in.velocity);
     //printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
      
