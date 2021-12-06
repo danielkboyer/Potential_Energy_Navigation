@@ -26,9 +26,7 @@ int main(int argc, char* argv[]){
 	float friction = stof(argv[10]);
 	//********** END Collect arguments **********
 
-	printf("Initializing Properties\n");
-	//Initialize properties
-	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX,startingY);
+	
 
 	printf("Initializing FileWriter\n");
 	//Initialize file_Writer
@@ -39,6 +37,10 @@ int main(int argc, char* argv[]){
 	//Initialize map
 	Map map = *new Map();
 	map.ReadFile(fileName);
+
+	printf("Initializing Properties\n");
+	//Initialize properties
+	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance());
 
 	printf("Initializing %ld Starting Agents at (%d,%d)\n",startingCount,startingX,startingY);
 	Agent* a = new Agent[startingCount];
