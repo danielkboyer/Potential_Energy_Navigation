@@ -22,7 +22,7 @@ void GPU_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
     for(int i=0;i<agentsToPrune;i++){
         x = rand()%numberAgents;
         agents[x].pruned = true;
-        printf("ID pruned: %ld\n", x);
+        //printf("ID pruned: %ld\n", x);
     }
 }
 //this will be done in serial

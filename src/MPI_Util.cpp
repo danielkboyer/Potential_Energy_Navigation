@@ -3,10 +3,10 @@
 #include "Properties.h"
 #include "math.h"
 #include "Util.h"
-#include "Serial_Util.h"
+#include "MPI_Util.h"
+#include <mpi.h>
 
-
-void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
+void MPI_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
     for(int x = 0;x<inCount;x++){
 		int aIndex = x*properties.numberOfDirectionSpawn;
 		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
@@ -17,7 +17,7 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 		}
 	}
 }
-void Serial_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
+void MPI_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
     srand (100);
     long x = 0;
     for(int i=0;i<agentsToPrune;i++){
@@ -27,7 +27,7 @@ void Serial_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune
     }
 }
 //this will be done in serial
-void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat* out, long numberAgents, long agentsToPrune){
+void MPI_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat* out, long numberAgents, long agentsToPrune){
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
     //printf("\n randArrayIDs:");
@@ -86,7 +86,7 @@ void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate,
     out->offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*10.0*stdDeviation + stdDeviation/5.0;
 }
 // this is called for all agents to see if they are pruned
-void Serial_Util::CheckPrune(Agent* out, Properties properties, Stat stat){
+void MPI_Util::CheckPrune(Agent* out, Properties properties, Stat stat){
     if ((out->DistanceFrom(properties.agentStartX,properties.agentStartY)/stat.d_avg + out->Energy(properties.gravity, properties.friction)/stat.E_avg) - stat.offset <=0) {
         out->pruned = true;
         // also do we need a counter for the total number of points pruned?
@@ -94,13 +94,13 @@ void Serial_Util::CheckPrune(Agent* out, Properties properties, Stat stat){
     ///////////////// do we need to do something here to make the list/ directory that we discussed with adi
     }
 }
-void Serial_Util::Prune(Agent* agents, int count, Properties properties, Stat stat){
+void MPI_Util::Prune(Agent* agents, int count, Properties properties, Stat stat){
     for(int x = 0;x<count;x++){
         CheckPrune(&agents[x],properties,stat);
     }
 }
 //Must have a non null out agent
-Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
+Agent MPI_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
     //printf("Before\n");
     Agent out;
     out.pruned = false;
@@ -113,7 +113,7 @@ Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties
     return out;
 }
 
-Agent Serial_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
+Agent MPI_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
     out.positionX = in.positionX + cos(newDirection) * properties.travelDistance;
     out.positionY = in.positionY + sin(newDirection) * properties.travelDistance;
     //printf("Agent position %f,%f\n",out->positionX,out->positionY);
@@ -122,7 +122,7 @@ Agent Serial_Util::AgentTravel(Agent in, Agent out, float newDirection, Properti
     
 }
 //must have out positionX and positionY populated
-Agent Serial_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
+Agent MPI_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
     out.height = map.GetHeight(out.positionX,out.positionY);
     if(isnan(out.height) || (2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) < 0){
         //printf("InHeight %f, InVelocity: %f\n",in.height,in.velocity);

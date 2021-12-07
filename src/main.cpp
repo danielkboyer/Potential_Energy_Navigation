@@ -44,6 +44,7 @@ int main(int argc, char* argv[]){
 	//Initialize properties
 	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),numberOfDirectionSpawn,directionSpawnRadius);
 
+	// Initialize starting agents at starting position serially
 	printf("Initializing %ld Starting Agents at (%d,%d), v=%f\n",startingCount,startingX,startingY,startVelocity);
 	Agent* a = new Agent[startingCount];
 	long startAgentId = 0;
@@ -56,6 +57,7 @@ int main(int argc, char* argv[]){
 		currentDirection+= radiusInterval;
 	}
 	
+	// initialize the utility input from the user
 	printf("Initializing Utility\n");
 	Util *utility;
 	if(runType == 0){
@@ -64,24 +66,24 @@ int main(int argc, char* argv[]){
 	else if(runType == 1){
 		utility = new GPU_Util();
 	}
-	else{
-		
+	else if(runType == 2){
+		utility = new MPI_Util();
+	else{	
+		printf("invalid Utility should be 0 for serial, 1 for GPU, 2 for MPI")
 	}
+	
+	// initialize variables for possibly parallel computing
 	long aLength = startingCount;
-
 	int loopAmount = 0;
 	float maxDistance = 0;
 	float maxDX = -1;
 	float maxDY = -1;
 	while(aLength > 0){
-
-		
 		printf("\nALength: %ld\n",aLength);
 		long prunedAmount = 0;	
 		if(aLength > maxAgentCount){
 			printf("ALength %ld>%ld ",aLength,maxAgentCount);
-			// get stats for prunning
-			// have barrier for threads and only do on thread 1
+			/// get stats for prunning
 			int amountToPrune = aLength - maxAgentCount*1.02;
 			printf("\namount to prune: %i\n",amountToPrune);
 			
@@ -94,25 +96,34 @@ int main(int argc, char* argv[]){
 			// utility->Prune(a,aLength,properties,*stat);
 			// delete stat;
 
-			// Random Prune
+			/// Random Prune, this could change for implimentations
+				// could be better to generate the random array out here 
+				// and then distribute the array based on implimentation
 			utility->RandPrune(a, aLength, long(amountToPrune));
+			/// Count up how many were pruned from prunning process
+			long prunedAmount = 0;
+			if(a[x].pruned==true) {prunedAmount_prunning +=1;
+			printf("Pruned Amount from RandPrune %ld\n",prunedAmount_prunning);
 		}
 
-		// function to count how mant were pruned, this will change for implimentation
-		//This takes just as long as pruning O(n) (minus the computation piece per n)
-		//We could do a reduce sum here
+		// Count how mant were pruned, this will change for implimentation
+			// This takes just as long as pruning O(n) (minus the computation piece per n)
+			// We could do a reduce sum here
 		for(int x = 0;x<aLength;x++){ 
+			// Find which location has the max and what the max is, maybe make a max class
 			if(a[x].DistanceFrom(properties.agentStartX,properties.agentStartY) > maxDistance){
 				maxDistance = a[x].DistanceFrom(properties.agentStartX,properties.agentStartY);
 				maxDX = a[x].positionX;
 				maxDY = a[x].positionY;
 			}
+			// Count up how many were pruned
 			if(a[x].pruned==true) {prunedAmount+=1;
 			}
 		}
 		printf("Total Pruned Amount %ld\n",prunedAmount);
 
-		//This might be able to be optimized, but at the moment I really don't know
+		// Make new array without prunned agents
+			// This might be able to be optimized, unsure how though
 		int bLength = aLength - prunedAmount;
 		printf("Amount left %i\n",bLength);
 		Agent* b = new Agent[bLength];
@@ -123,26 +134,24 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
-		//Write to file here
+		//Write to file here, this is probbaly the same for each implimentation
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;
 
 		delete[] a;
-		aLength = bLength*numberOfDirectionSpawn;
-		a = new Agent[aLength];
+		aLength = bLength*numberOfDirectionSpawn; 
+		a = new Agent[aLength]; // spawn all new agents
 
-		//Perform the step all in parallell
+		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
 		
 		delete[] b;
 		loopAmount++;
-
 	}
 	
 	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
 }
-
 
 void Usage(char* prog_name){
 	fprintf(stderr, "usage: %s <file_name> <starting_count> <starting_x> <starting_y> <direction_spawn_radius> <number_of_direction_spawn> <travel_distance> <start_velocity> <max_agent_count> <friction> <run_type>\n",prog_name);
