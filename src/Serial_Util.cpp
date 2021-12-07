@@ -18,6 +18,12 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 	}
 }
 void Serial_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
+    // shuffle the array to get the points
+
+
+    // combine the array 
+    
+    
     srand(time(NULL));
     const int N = numberAgents;
     long numbers [N];

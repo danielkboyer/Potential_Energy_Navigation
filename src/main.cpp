@@ -67,9 +67,10 @@ int main(int argc, char* argv[]){
 		utility = new GPU_Util();
 	}
 	else if(runType == 2){
-		utility = new MPI_Util();
+		//utility = new MPI_Util();
+	}
 	else{	
-		printf("invalid Utility should be 0 for serial, 1 for GPU, 2 for MPI")
+		printf("invalid Utility should be 0 for serial, 1 for GPU, 2 for MPI");
 	}
 	
 	// initialize variables for possibly parallel computing
@@ -81,6 +82,7 @@ int main(int argc, char* argv[]){
 	while(aLength > 0){
 		printf("\nALength: %ld\n",aLength);
 		long prunedAmount = 0;	
+		// go into prunning
 		if(aLength > maxAgentCount){
 			printf("ALength %ld>%ld ",aLength,maxAgentCount);
 			/// get stats for prunning
@@ -101,11 +103,14 @@ int main(int argc, char* argv[]){
 				// and then distribute the array based on implimentation
 			utility->RandPrune(a, aLength, long(amountToPrune));
 			/// Count up how many were pruned from prunning process
-			long prunedAmount = 0;
-			if(a[x].pruned==true) {prunedAmount_prunning +=1;
-			printf("Pruned Amount from RandPrune %ld\n",prunedAmount_prunning);
+			long prunedAmount_prunning = 0;
+			for(int x = 0;x<aLength;x++){ 
+				if(a[x].pruned==true) {
+					prunedAmount_prunning +=1;
+				}
+			}
+		printf("Pruned Amount from RandPrune %ld\n",prunedAmount_prunning);
 		}
-
 		// Count how mant were pruned, this will change for implimentation
 			// This takes just as long as pruning O(n) (minus the computation piece per n)
 			// We could do a reduce sum here
@@ -117,7 +122,8 @@ int main(int argc, char* argv[]){
 				maxDY = a[x].positionY;
 			}
 			// Count up how many were pruned
-			if(a[x].pruned==true) {prunedAmount+=1;
+			if(a[x].pruned==true) {
+				prunedAmount+=1;
 			}
 		}
 		printf("Total Pruned Amount %ld\n",prunedAmount);
