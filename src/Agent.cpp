@@ -3,6 +3,8 @@
 #include "math.h"
 #include "stdio.h"
 using namespace std;
+
+
 Agent::Agent(){}
 Agent::Agent(Agent& agent){
     //printf("Constructor called\n");

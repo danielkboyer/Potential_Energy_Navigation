@@ -8,6 +8,7 @@
 #include "FileWriter.h"
 #include "Serial_Util.h"
 #include "GPU_Util.h"
+#include "MPI_Util.h"
 void Usage(char* prog_name);
 
 int main(int argc, char* argv[]){
@@ -52,6 +53,7 @@ int main(int argc, char* argv[]){
 	float currentDirection = 0;
 	float startingHeight = map.GetHeight(startingX,startingY);
 	printf("Starting height: %f\n",startingHeight);
+
 	for(int x = 0;x<startingCount;x++){
 		a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,false);
 		currentDirection+= radiusInterval;
@@ -60,6 +62,7 @@ int main(int argc, char* argv[]){
 	// initialize the utility input from the user
 	printf("Initializing Utility\n");
 	Util *utility;
+
 	if(runType == 0){
 	utility = new Serial_Util();
 	}
@@ -67,7 +70,7 @@ int main(int argc, char* argv[]){
 		utility = new GPU_Util();
 	}
 	else if(runType == 2){
-		//utility = new MPI_Util();
+		utility = new MPI_Util();
 	}
 	else{	
 		printf("invalid Utility should be 0 for serial, 1 for GPU, 2 for MPI");
@@ -80,37 +83,27 @@ int main(int argc, char* argv[]){
 	float maxDX = -1;
 	float maxDY = -1;
 	while(aLength > 0){
-		printf("\nALength: %ld\n",aLength);
+		//Start Loop
+		printf("\nALength: %ld\nLoop Number:%d\n",aLength,loopAmount);
+		
+	
+		//******** PRUNING ********//
 		long prunedAmount = 0;	
-		// go into prunning
-		if(aLength > maxAgentCount){
-			printf("ALength %ld>%ld ",aLength,maxAgentCount);
-			/// get stats for prunning
-			int amountToPrune = aLength - maxAgentCount*1.02;
-			printf("\namount to prune: %i\n",amountToPrune);
-			
-			/// for Calc avg class
-			// long sampleRate = 1000;
-			// Stat* stat = new Stat();
-			// utility->CalcAvg(a, properties, sampleRate, stat, aLength, long (amountToPrune));
-			// printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
-			// //perform the prune here in parallell
-			// utility->Prune(a,aLength,properties,*stat);
-			// delete stat;
-
-			/// Random Prune, this could change for implimentations
-				// could be better to generate the random array out here 
-				// and then distribute the array based on implimentation
-			utility->RandPrune(a, aLength, long(amountToPrune));
-			/// Count up how many were pruned from prunning process
-			long prunedAmount_prunning = 0;
-			for(int x = 0;x<aLength;x++){ 
-				if(a[x].pruned==true) {
-					prunedAmount_prunning +=1;
-				}
+		long amountToPrune = max(aLength - maxAgentCount,(long)0);
+		printf("Amount to prune: %ld\n",amountToPrune);
+	
+		utility->Prune(a, aLength, long(amountToPrune));
+		/// Count up how many were pruned from prunning process
+		long prunedAmount_prunning = 0;
+		for(int x = 0;x<aLength;x++){ 
+			if(a[x].pruned==true) {
+				prunedAmount_prunning +=1;
 			}
-		printf("Pruned Amount from RandPrune %ld\n",prunedAmount_prunning);
 		}
+		printf("Pruned Amount from RandPrune %ld\n",prunedAmount_prunning);
+
+		//******** END PRUNING ********//
+		
 		// Count how mant were pruned, this will change for implimentation
 			// This takes just as long as pruning O(n) (minus the computation piece per n)
 			// We could do a reduce sum here
