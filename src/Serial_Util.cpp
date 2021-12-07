@@ -18,13 +18,34 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 	}
 }
 void Serial_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
-    srand (100);
-    long x = 0;
+    srand(time(NULL));
+    const int N = numberAgents;
+    long numbers [N];
+    for (int x=0; x!=agentsToPrune;x++){
+        long tmp = (rand()%numberAgents);
+        bool isNotAdded = true;
+        int i=0;
+        while(i<x && isNotAdded) {
+            if(numbers[i] == tmp) isNotAdded = false;
+            i++;
+        }
+        while(isNotAdded)
+           tmp = (rand() % numberAgents);
+        numbers[x] = tmp;
+    }
     for(int i=0;i<agentsToPrune;i++){
-        x = rand()%numberAgents;
-        agents[x].pruned = true;
+        agents[numbers[i]].pruned = true;
         //printf("ID pruned: %ld\n", x);
     }
+
+    /// origional random 
+    // srand (100);
+    // long x = 0;
+    // for(int i=0;i<agentsToPrune;i++){
+    //     x = rand()%numberAgents;
+    //     agents[x].pruned = true;
+    //     //printf("ID pruned: %ld\n", x);
+    // }
 }
 //this will be done in serial
 void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat* out, long numberAgents, long agentsToPrune){

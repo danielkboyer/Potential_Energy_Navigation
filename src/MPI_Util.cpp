@@ -7,16 +7,33 @@
 #include <mpi.h>
 
 void MPI_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
-    for(int x = 0;x<inCount;x++){
-		int aIndex = x*properties.numberOfDirectionSpawn;
+    /* Let the system do what it needs to start up MPI */
+    MPI_Init(NULL,NULL);
+    /* Get my process rank */
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    /* Find out how many processes are being used */
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
+    int localInCount = inCount/comm_sz;
+
+    // if (my_rank == 0){
+    //     int * localInCount_p = inCount/comm_sz;
+    // }
+    // // broadcast variables
+    // MPI_Bcast(localInCount_p,1,MPI_INT,0,MPI_COMM_WORLD);
+
+    // have each agent do the number of direction spawn for each agent assigned to it;
+    for(int x = my_rank*localInCount; x < localInCount + my_rank*localInCount; x++){
+        int aIndex = x*properties.numberOfDirectionSpawn;
 		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
 			float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
-			//a[aIndex+y] = Agent();
-			out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
+            out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
 			//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
 		}
 	}
+    /* Shut down MPI */
+    MPI_Finalize();
 }
+
 void MPI_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
     srand (100);
     long x = 0;
