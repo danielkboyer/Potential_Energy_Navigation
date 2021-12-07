@@ -60,8 +60,6 @@ int main(int argc, char* argv[]){
 
 	int loopAmount = 0;
 	while(aLength > 0){
-
-
 		if(loopAmount > 0){
 			printf("\n");
 			for(int x = 0;x<aLength;x++){
@@ -69,29 +67,31 @@ int main(int argc, char* argv[]){
 		//printf("Agent direction V2 %f, PositionX: %f\n",a[x].direction,a[x].positionX);
 		}
 		}
-		if(loopAmount == 25){
-			
+		if(loopAmount == 200){	
 		return 0;
 		}
 
-		
 		printf("\nALength: %ld\n",aLength);
 		long prunedAmount = 0;	
 		if(aLength > maxAgentCount){
-			printf("ALength %ld>%ld \n",aLength,maxAgentCount);
+			printf("ALength %ld>%ld ",aLength,maxAgentCount);
 			// get stats for prunning
 			// have barrier for threads and only do on thread 1
-			int amountToPrune = aLength - maxAgentCount + 100;
+			int amountToPrune = aLength - maxAgentCount + maxAgentCount*.05 + 1000;
 			printf("\namount to prune: %i\n",amountToPrune);
-			long sampleRate = 300;
+			long sampleRate = 1000;
 			Stat* stat = new Stat();
-			utility->CalcAvg(a, properties, sampleRate, *stat, aLength, long (amountToPrune));
+			utility->CalcAvg(a, properties, sampleRate, stat, aLength, long (amountToPrune));
 			printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
 			//prune here
+			long P_prunedAmount = 0;
 			for(int x = 0;x<aLength;x++){
-			
-				utility->CheckPrune(a[x], properties,*stat);
+				utility->CheckPrune(&a[x], properties,*stat);
+				if(a[x].pruned==true) P_prunedAmount+=1;
 			}
+			printf("prunning Pruned Amount %ld\n",P_prunedAmount);
+			printf("pruned/shouldve been pruned= %f\n", float(float(P_prunedAmount)/float(amountToPrune)));
+
 			delete stat;
 		}
 
@@ -100,9 +100,10 @@ int main(int argc, char* argv[]){
 			if(a[x].pruned==true) {prunedAmount+=1;
 			}
 		}
-		printf("Pruned Amount %ld\n",prunedAmount);
+		printf("Total Pruned Amount %ld\n",prunedAmount);
 
 		int bLength = aLength - prunedAmount;
+		printf("Amount left %i",bLength);
 		Agent* b = new Agent[bLength];
 		int currentBIndex = 0;
 		for(int x = 0;x<aLength;x++){
