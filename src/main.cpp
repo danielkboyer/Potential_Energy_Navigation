@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
 			printf("ALength %ld>%ld ",aLength,maxAgentCount);
 			// get stats for prunning
 			// have barrier for threads and only do on thread 1
-			int amountToPrune = aLength - maxAgentCount + 100;
+			int amountToPrune = aLength - maxAgentCount*1.02;
 			printf("\namount to prune: %i\n",amountToPrune);
 			
 			/// for Calc avg class

@@ -17,8 +17,12 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 	}
 }
 void GPU_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
+    srand (100);
+    long x = 0;
     for(int i=0;i<agentsToPrune;i++){
-        agents[rand()%numberAgents].pruned = true;
+        x = rand()%numberAgents;
+        agents[x].pruned = true;
+        printf("ID pruned: %ld\n", x);
     }
 }
 //this will be done in serial
