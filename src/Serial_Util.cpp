@@ -3,9 +3,27 @@
 #include "Properties.h"
 #include "math.h"
 #include "Util.h"
-#include "CPU_Util.h"
+#include "Serial_Util.h"
+
+
+void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
+
+    for(int x = 0;x<inCount;x++){
+			
+			int aIndex = x*properties.numberOfDirectionSpawn;
+			for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
+				float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+				//a[aIndex+y] = Agent();
+				out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
+				
+				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
+			}
+			
+			
+		}
+}
 //this will be done in serial
-void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
+void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
     
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
@@ -49,8 +67,15 @@ void CPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
     stdDeviation = sqrt(stdDeviation/sampleRate);
     out.offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*5.0*stdDeviation + stdDeviation/10.0;
 }
+
+
+void Serial_Util::Prune(Agent* agents, int count, Properties properties, Stat stat){
+    for(int x = 0;x<count;x++){
+        CheckPrune(agents[x],properties,stat);
+    }
+}
 // this is called for all agents to see if they are pruned
-void CPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
+void Serial_Util::CheckPrune(Agent out, Properties properties, Stat stat){
     if ((out.DistanceFrom(properties.agentStartX,properties.agentStartY)/stat.d_avg + out.Energy(properties.gravity, properties.friction)/stat.E_avg) - stat.offset <=0) {
         out.pruned = true;
         // also do we need a counter for the total number of points pruned?
@@ -59,7 +84,7 @@ void CPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
     }
 }
 //Must have a non null out agent
-Agent CPU_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
+Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
     //printf("Before\n");
     Agent out;
     out.pruned = false;
@@ -73,7 +98,7 @@ Agent CPU_Util::AgentStep(Agent in, float newDirection, Properties properties, M
     
 }
 
-Agent CPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
+Agent Serial_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
     out.positionX = in.positionX + cos(newDirection) * properties.travelDistance;
     out.positionY = in.positionY + sin(newDirection) * properties.travelDistance;
     //printf("Agent position %f,%f\n",out->positionX,out->positionY);
@@ -82,7 +107,7 @@ Agent CPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties 
     
 }
 //must have out positionX and positionY populated
-Agent CPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
+Agent Serial_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
     
     out.height = map.GetHeight(out.positionX,out.positionY);
     if(isnan(out.height) || (2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) < 0){

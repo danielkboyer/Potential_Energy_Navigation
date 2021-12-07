@@ -4,6 +4,23 @@
 #include "math.h"
 #include "Util.h"
 #include "GPU_Util.h"
+
+void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
+
+    for(int x = 0;x<outCount;x++){
+			
+			int aIndex = x*properties.numberOfDirectionSpawn;
+			for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
+				float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+				//a[aIndex+y] = Agent();
+				out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
+				
+				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
+			}
+			
+			
+		}
+}
 //this will be done in serial
 void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
     
@@ -48,6 +65,13 @@ void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
     }
     stdDeviation = sqrt(stdDeviation/sampleRate);
     out.offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*5.0*stdDeviation + stdDeviation/10.0;
+}
+
+
+void GPU_Util::Prune(Agent* agents, int count, Properties properties, Stat stat){
+    for(int x = 0;x<count;x++){
+        CheckPrune(agents[x],properties,stat);
+    }
 }
 // this is called for all agents to see if they are pruned
 void GPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){

@@ -4,18 +4,25 @@ ODIR = obj
 SDIR = src
 INC = -Iinc
 CFLAGS = -Wall -g
-
-
+GPU = false
+GPUNAME = GPU_Util.cpp
+ifeq ($(GPU),true)
+CC = nvcc
+OUT = lib_gpu
+ODIR = obj_gpu
+CFLAGS = -g
+GPUNAME = GPU_Util.cu
+endif
 # $(SDIR)/%.o : $(SDIR)/%.cpp
 # 	$(CC) -c $(SDIR)
 # edit : $(ODIR)/%.o
-$(OUT)/run_me : $(ODIR)/cpu_main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
-       $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o
-	$(CC) -o $(OUT)/run_me $(ODIR)/cpu_main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
-        $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o
+$(OUT)/run_me : $(ODIR)/main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
+       $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/Serial_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o $(ODIR)/GPU_Util.o
+	$(CC) -o $(OUT)/run_me $(ODIR)/main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
+        $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/Serial_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o $(ODIR)/GPU_Util.o
 
-$(ODIR)/cpu_main.o : $(SDIR)/cpu_main.cpp $(SDIR)/Agent.h $(SDIR)/Util.h $(SDIR)/FileWriter.h $(SDIR)/CPU_Util.h
-	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/cpu_main.cpp  
+$(ODIR)/main.o : $(SDIR)/main.cpp $(SDIR)/Agent.h $(SDIR)/Util.h $(SDIR)/FileWriter.h $(SDIR)/Serial_Util.h $(SDIR)/GPU_Util.h
+	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/main.cpp  
 $(ODIR)/Point.o : $(SDIR)/Point.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Point.cpp
 $(ODIR)/Map.o : $(SDIR)/Map.cpp $(SDIR)/Point.h
@@ -26,12 +33,14 @@ $(ODIR)/Util.o : $(SDIR)/Util.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Util.cpp
 $(ODIR)/FileWriter.o : $(SDIR)/FileWriter.cpp $(SDIR)/Agent.h
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/FileWriter.cpp
-$(ODIR)/CPU_Util.o : $(SDIR)/CPU_Util.cpp $(SDIR)/Agent.h $(SDIR)/Map.h $(SDIR)/Properties.h $(SDIR)/Util.h $(SDIR)/CPU_Util.h
-	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/CPU_Util.cpp
+$(ODIR)/Serial_Util.o : $(SDIR)/Serial_Util.cpp $(SDIR)/Agent.h $(SDIR)/Map.h $(SDIR)/Properties.h $(SDIR)/Util.h $(SDIR)/Serial_Util.h
+	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Serial_Util.cpp
 $(ODIR)/Agent.o : $(SDIR)/Agent.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Agent.cpp
 $(ODIR)/Stat.o : $(SDIR)/Stat.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Stat.cpp
+$(ODIR)/GPU_Util.o : $(SDIR)/$(GPUNAME)
+	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/$(GPUNAME)
 clean :
-	rm $(OUT)/run_me $(ODIR)/cpu_main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
-           $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/CPU_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o 
+	rm $(OUT)/run_me $(ODIR)/main.o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
+           $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/Serial_Util.o $(ODIR)/Agent.o $(ODIR)/Stat.o $(ODIR)/GPU_Util.o
