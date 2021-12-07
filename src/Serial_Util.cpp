@@ -7,20 +7,20 @@
 
 
 void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
-
     for(int x = 0;x<inCount;x++){
-			
-			int aIndex = x*properties.numberOfDirectionSpawn;
-			for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
-				float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
-				//a[aIndex+y] = Agent();
-				out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
-				
-				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
-			}
-			
-			
+		int aIndex = x*properties.numberOfDirectionSpawn;
+		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
+			float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+			//a[aIndex+y] = Agent();
+			out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
+			//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
 		}
+	}
+}
+void Serial_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
+    for(int i=0;i<agentsToPrune;i++){
+        agents[rand()%numberAgents].pruned = true;
+    }
 }
 //this will be done in serial
 void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat* out, long numberAgents, long agentsToPrune){
@@ -28,7 +28,7 @@ void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate,
     int randArrayIDs[sampleRate]; // array of ID's of agents
     //printf("\n randArrayIDs:");
     for(int i=0;i<sampleRate;i++){
-        randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to 99
+        randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to number agents
         //printf("  %i  ",randArrayIDs[i]);
     }
     // check for nans, make new list with non nans
@@ -107,7 +107,6 @@ Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties
     out = AgentHeight(in,out,newDirection,properties,map);
     //printf("After Again\n");
     return out;
-    
 }
 
 Agent Serial_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
@@ -120,22 +119,17 @@ Agent Serial_Util::AgentTravel(Agent in, Agent out, float newDirection, Properti
 }
 //must have out positionX and positionY populated
 Agent Serial_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
-    
     out.height = map.GetHeight(out.positionX,out.positionY);
     if(isnan(out.height) || (2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) < 0){
         //printf("InHeight %f, InVelocity: %f\n",in.height,in.velocity);
         //printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
-     
         //printf("Less than zero\n");
         out.pruned = true;
         return out;
     }
-    
-
     out.velocity = sqrt(2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) * properties.friction;
     out.time += properties.travelDistance/out.velocity;
     //printf("InHeight %f, InVelocity: %f\n",in.height,in.velocity);
     //printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
-     
     return out;
 }

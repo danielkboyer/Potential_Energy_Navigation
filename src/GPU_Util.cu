@@ -8,32 +8,30 @@
 
 
 void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
-
     for(int x = 0;x<inCount;x++){
-			
-			int aIndex = x*properties.numberOfDirectionSpawn;
-			for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
-				float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
-				//a[aIndex+y] = Agent();
-				out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
-				
-				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
-			}
-			
-			
+		int aIndex = x*properties.numberOfDirectionSpawn;
+		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
+			float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+			//a[aIndex+y] = Agent();
+			out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);		
+			//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
 		}
+	}
+}
+void GPU_Util::RandPrune(Agent* agents, long numberAgents, long agentsToPrune){
+    for(int i=0;i<agentsToPrune;i++){
+        agents[rand()%numberAgents].pruned = true;
+    }
 }
 //this will be done in serial
 void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
-    
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
     //printf("\n randArrayIDs:");
     for(int i=0;i<sampleRate;i++){
-        randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to 99
+        randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to number of agents
         //printf("  %i  ",randArrayIDs[i]);
     }
-
     // make arrays of agent energies and distances for averaging
     float randDistances[sampleRate];
     float randEnergies[sampleRate];

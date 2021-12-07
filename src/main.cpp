@@ -82,15 +82,20 @@ int main(int argc, char* argv[]){
 			printf("ALength %ld>%ld ",aLength,maxAgentCount);
 			// get stats for prunning
 			// have barrier for threads and only do on thread 1
-			int amountToPrune = aLength - maxAgentCount + maxAgentCount*.05 + 1000;
+			int amountToPrune = aLength - maxAgentCount + 100;
 			printf("\namount to prune: %i\n",amountToPrune);
-			long sampleRate = 1000;
-			Stat* stat = new Stat();
-			utility->CalcAvg(a, properties, sampleRate, stat, aLength, long (amountToPrune));
-			printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
-			//perform the prune here in parallell
-			utility->Prune(a,aLength,properties,*stat);
-			delete stat;
+			
+			/// for Calc avg class
+			// long sampleRate = 1000;
+			// Stat* stat = new Stat();
+			// utility->CalcAvg(a, properties, sampleRate, stat, aLength, long (amountToPrune));
+			// printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
+			// //perform the prune here in parallell
+			// utility->Prune(a,aLength,properties,*stat);
+			// delete stat;
+
+			// Random Prune
+			utility->RandPrune(a, aLength, long(amountToPrune));
 		}
 
 		// function to count how mant were pruned, this will change for implimentation
@@ -103,7 +108,6 @@ int main(int argc, char* argv[]){
 				maxDY = a[x].positionY;
 			}
 			if(a[x].pruned==true) {prunedAmount+=1;
-
 			}
 		}
 		printf("Total Pruned Amount %ld\n",prunedAmount);
@@ -119,12 +123,9 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
-
-		
 		//Write to file here
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;
-
 
 		delete[] a;
 		aLength = bLength*numberOfDirectionSpawn;
@@ -133,18 +134,13 @@ int main(int argc, char* argv[]){
 		//Perform the step all in parallell
 		utility->StepAll(b,bLength,a,aLength,properties,map);
 		
-		
 		delete[] b;
 		loopAmount++;
-
 
 	}
 	
 	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
-
-
-
 }
 
 
