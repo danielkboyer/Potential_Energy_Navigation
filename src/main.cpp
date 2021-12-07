@@ -71,22 +71,8 @@ int main(int argc, char* argv[]){
 
 	int loopAmount = 0;
 	while(aLength > 0){
-<<<<<<< HEAD:src/cpu_main.cpp
-		if(loopAmount > 0){
-			printf("\n");
-			for(int x = 0;x<aLength;x++){
-
-		//printf("Agent direction V2 %f, PositionX: %f\n",a[x].direction,a[x].positionX);
-		}
-		}
-		if(loopAmount == 200){	
-		return 0;
-		}
-
-=======
 
 		
->>>>>>> a102b5fdaa90e9e0395f74c31aa897ef4c3730b8:src/main.cpp
 		printf("\nALength: %ld\n",aLength);
 		long prunedAmount = 0;	
 		if(aLength > maxAgentCount){
@@ -99,20 +85,8 @@ int main(int argc, char* argv[]){
 			Stat* stat = new Stat();
 			utility->CalcAvg(a, properties, sampleRate, stat, aLength, long (amountToPrune));
 			printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
-<<<<<<< HEAD:src/cpu_main.cpp
-			//prune here
-			long P_prunedAmount = 0;
-			for(int x = 0;x<aLength;x++){
-				utility->CheckPrune(&a[x], properties,*stat);
-				if(a[x].pruned==true) P_prunedAmount+=1;
-			}
-			printf("prunning Pruned Amount %ld\n",P_prunedAmount);
-			printf("pruned/shouldve been pruned= %f\n", float(float(P_prunedAmount)/float(amountToPrune)));
-
-=======
 			//perform the prune here in parallell
 			utility->Prune(a,aLength,properties,*stat);
->>>>>>> a102b5fdaa90e9e0395f74c31aa897ef4c3730b8:src/main.cpp
 			delete stat;
 		}
 
