@@ -1,3 +1,7 @@
 .vscode/*
 lib/*
 obj/*
+lib_gpu/*
+lig_mpi/*
+obj_gpu/*
+obj_mpi/*
