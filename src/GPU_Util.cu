@@ -4,8 +4,28 @@
 #include "math.h"
 #include "Util.h"
 #include "GPU_Util.h"
+
+
+
+void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
+
+    for(int x = 0;x<inCount;x++){
+			
+			int aIndex = x*properties.numberOfDirectionSpawn;
+			for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
+				float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+				//a[aIndex+y] = Agent();
+				out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
+				
+				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
+			}
+			
+			
+		}
+}
 //this will be done in serial
-void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat* out, long numberAgents, long agentsToPrune){
+void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, Stat out, long numberAgents, long agentsToPrune){
+    
     // get list of random number to interate through the agents 
     int randArrayIDs[sampleRate]; // array of ID's of agents
     //printf("\n randArrayIDs:");
@@ -13,44 +33,30 @@ void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
         randArrayIDs[i]=rand()%numberAgents;  //Generate number between 0 to 99
         //printf("  %i  ",randArrayIDs[i]);
     }
-    // check for nans, make new list with non nans
 
-    // make array of agent energies for averaging, but check for nans
-    float randEnergies[sampleRate];
-    long new_sample_rate = 0;
-    for (int i=0;i<sampleRate;i++){
-        randEnergies[i] = agents[randArrayIDs[i]].Energy(properties.gravity,properties.friction);
-        // check for nan values
-        if (isnan(randEnergies[i]) == false) {
-            randArrayIDs[new_sample_rate] = randArrayIDs[i];
-            randEnergies[new_sample_rate] = randEnergies[i];
-            new_sample_rate++;
-        }
-    }
-    // if none are nan then put the new sample rate back to the sample rate
-    // new_sample_rate could also be zero if they are all nan
-    if ((new_sample_rate==0.0) && (isnan(randEnergies[0])==false)) new_sample_rate=sampleRate;
-    sampleRate = new_sample_rate;
-    printf("new sample rate: %ld\n", new_sample_rate);
+    // make arrays of agent energies and distances for averaging
     float randDistances[sampleRate];
+    float randEnergies[sampleRate];
     for (int i=0;i<sampleRate;i++){
         randDistances[i] = agents[randArrayIDs[i]].DistanceFrom(properties.agentStartX,properties.agentStartY);
+        randEnergies[i] = agents[randArrayIDs[i]].Energy(properties.gravity,properties.friction);
         //printf("Rand Distances %d: %f\n",i,randDistances[i]);
         //printf("randEnergies %d: %f\n",i,randEnergies[i]);
         //printf("i, for agents %d: x  %f  y  %f\n",i,agents[randArrayIDs[i]].positionX, agents[randArrayIDs[i]].positionY);
-    } 
+
+    }
     // get average distance and average energy for each random ID
     for (int i=0;i<sampleRate;i++){
         //printf("Rand Distances %d: %f\n",i,out.d_avg);
-        out->d_avg += randDistances[i]/(float(sampleRate));
-        out->E_avg += randEnergies[i]/(float(sampleRate));
+        out.d_avg += randDistances[i]/(float(sampleRate));
+        out.E_avg += randEnergies[i]/(float(sampleRate));
     }
     // get the normalized average
     float normalized[sampleRate];
     float avg_normalized = 0;
     for (int i=0;i<sampleRate;i++){
         //TODO: out.d_avg/out.d_avg equals 1 right?
-        normalized[i] = sqrt(randDistances[i]*randDistances[i]/(out->d_avg* out->d_avg) + randEnergies[i]*randEnergies[i]/(out->E_avg*out->E_avg));
+        normalized[i] = sqrt(randDistances[i]*randDistances[i]/(out.d_avg*out.d_avg) + randEnergies[i]*randEnergies[i]/(out.E_avg*out.E_avg));
         avg_normalized +=normalized[i];
     }
     avg_normalized = avg_normalized/float(sampleRate);
@@ -60,20 +66,22 @@ void GPU_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate, St
         stdDeviation += (normalized[i] - avg_normalized)*(normalized[i] - avg_normalized);
     }
     stdDeviation = sqrt(stdDeviation/sampleRate);
-    out->offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*10.0*stdDeviation + stdDeviation/5.0;
+    out.offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*5.0*stdDeviation + stdDeviation/10.0;
+}
+
+
+void GPU_Util::Prune(Agent* agents, int count, Properties properties, Stat stat){
+    for(int x = 0;x<count;x++){
+        CheckPrune(agents[x],properties,stat);
+    }
 }
 // this is called for all agents to see if they are pruned
-void GPU_Util::CheckPrune(Agent* out, Properties properties, Stat stat){
-    if ((out->DistanceFrom(properties.agentStartX,properties.agentStartY)/stat.d_avg + out->Energy(properties.gravity, properties.friction)/stat.E_avg) - stat.offset <=0) {
-        out->pruned = true;
+void GPU_Util::CheckPrune(Agent out, Properties properties, Stat stat){
+    if ((out.DistanceFrom(properties.agentStartX,properties.agentStartY)/stat.d_avg + out.Energy(properties.gravity, properties.friction)/stat.E_avg) - stat.offset <=0) {
+        out.pruned = true;
         // also do we need a counter for the total number of points pruned?
         //prune_counter += 1:
     ///////////////// do we need to do something here to make the list/ directory that we discussed with adi
-    }
-}
-void GPU_Util::Prune(Agent* agents, int count, Properties properties, Stat stat){
-    for(int x = 0;x<count;x++){
-        CheckPrune(&agents[x],properties,stat);
     }
 }
 //Must have a non null out agent

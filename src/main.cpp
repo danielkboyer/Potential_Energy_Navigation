@@ -70,6 +70,9 @@ int main(int argc, char* argv[]){
 	long aLength = startingCount;
 
 	int loopAmount = 0;
+	float maxDistance = 0;
+	float maxDX = -1;
+	float maxDY = -1;
 	while(aLength > 0){
 
 		
@@ -94,14 +97,20 @@ int main(int argc, char* argv[]){
 		//This takes just as long as pruning O(n) (minus the computation piece per n)
 		//We could do a reduce sum here
 		for(int x = 0;x<aLength;x++){ 
+			if(a[x].DistanceFrom(properties.agentStartX,properties.agentStartY) > maxDistance){
+				maxDistance = a[x].DistanceFrom(properties.agentStartX,properties.agentStartY);
+				maxDX = a[x].positionX;
+				maxDY = a[x].positionY;
+			}
 			if(a[x].pruned==true) {prunedAmount+=1;
+
 			}
 		}
 		printf("Total Pruned Amount %ld\n",prunedAmount);
 
 		//This might be able to be optimized, but at the moment I really don't know
 		int bLength = aLength - prunedAmount;
-		printf("Amount left %i",bLength);
+		printf("Amount left %i\n",bLength);
 		Agent* b = new Agent[bLength];
 		int currentBIndex = 0;
 		for(int x = 0;x<aLength;x++){
@@ -131,6 +140,7 @@ int main(int argc, char* argv[]){
 
 	}
 	
+	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
 
 

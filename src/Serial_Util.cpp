@@ -52,7 +52,7 @@ void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate,
     printf("new sample rate: %ld\n", new_sample_rate);
     float randDistances[sampleRate];
     for (int i=0;i<sampleRate;i++){
-        randDistances[i] = agents[randArrayIDs[i]].DistanceFrom(properties.agentStartX,properties.agentStartY);
+        randDistances[i] = 4*agents[randArrayIDs[i]].DistanceFrom(properties.agentStartX,properties.agentStartY);
         //printf("Rand Distances %d: %f\n",i,randDistances[i]);
         //printf("randEnergies %d: %f\n",i,randEnergies[i]);
         //printf("i, for agents %d: x  %f  y  %f\n",i,agents[randArrayIDs[i]].positionX, agents[randArrayIDs[i]].positionY);
@@ -78,6 +78,7 @@ void Serial_Util::CalcAvg(Agent* agents, Properties properties, long sampleRate,
         stdDeviation += (normalized[i] - avg_normalized)*(normalized[i] - avg_normalized);
     }
     stdDeviation = sqrt(stdDeviation/sampleRate);
+    printf("Standard Deviation %f\n",stdDeviation);
     out->offset = avg_normalized + (-0.5 + float(agentsToPrune)/float(numberAgents))*10.0*stdDeviation + stdDeviation/5.0;
 }
 // this is called for all agents to see if they are pruned
