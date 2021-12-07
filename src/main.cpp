@@ -6,12 +6,13 @@
 #include "Agent.h"
 #include "Util.h"
 #include "FileWriter.h"
-#include "CPU_Util.h"
+#include "Serial_Util.h"
+#include "GPU_Util.h"
 void Usage(char* prog_name);
 
 int main(int argc, char* argv[]){
 
-	if(argc != 11)
+	if(argc != 12)
 		Usage(argv[0]);
 	//********** Collect arguments **********
 	string fileName = argv[1];
@@ -24,6 +25,7 @@ int main(int argc, char* argv[]){
 	float startVelocity = stof(argv[8]);
 	long maxAgentCount = stol(argv[9]);
 	float friction = stof(argv[10]);
+	int runType = stoi(argv[11]);
 	//********** END Collect arguments **********
 
 	
@@ -40,7 +42,7 @@ int main(int argc, char* argv[]){
 
 	printf("Initializing Properties\n");
 	//Initialize properties
-	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance());
+	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),numberOfDirectionSpawn,directionSpawnRadius);
 
 	printf("Initializing %ld Starting Agents at (%d,%d), v=%f\n",startingCount,startingX,startingY,startVelocity);
 	Agent* a = new Agent[startingCount];
@@ -55,11 +57,21 @@ int main(int argc, char* argv[]){
 	}
 	
 	printf("Initializing Utility\n");
-	Util *utility = new CPU_Util();
+	Util *utility;
+	if(runType == 0){
+	utility = new Serial_Util();
+	}
+	else if(runType == 1){
+		utility = new GPU_Util();
+	}
+	else{
+		
+	}
 	long aLength = startingCount;
 
 	int loopAmount = 0;
 	while(aLength > 0){
+<<<<<<< HEAD:src/cpu_main.cpp
 		if(loopAmount > 0){
 			printf("\n");
 			for(int x = 0;x<aLength;x++){
@@ -71,6 +83,10 @@ int main(int argc, char* argv[]){
 		return 0;
 		}
 
+=======
+
+		
+>>>>>>> a102b5fdaa90e9e0395f74c31aa897ef4c3730b8:src/main.cpp
 		printf("\nALength: %ld\n",aLength);
 		long prunedAmount = 0;	
 		if(aLength > maxAgentCount){
@@ -83,6 +99,7 @@ int main(int argc, char* argv[]){
 			Stat* stat = new Stat();
 			utility->CalcAvg(a, properties, sampleRate, stat, aLength, long (amountToPrune));
 			printf("Stat averages (D_AVG:%f) (E_AVG:%f) (OFFSET:%f)\n",stat->d_avg,stat->E_avg,stat->offset);
+<<<<<<< HEAD:src/cpu_main.cpp
 			//prune here
 			long P_prunedAmount = 0;
 			for(int x = 0;x<aLength;x++){
@@ -92,16 +109,23 @@ int main(int argc, char* argv[]){
 			printf("prunning Pruned Amount %ld\n",P_prunedAmount);
 			printf("pruned/shouldve been pruned= %f\n", float(float(P_prunedAmount)/float(amountToPrune)));
 
+=======
+			//perform the prune here in parallell
+			utility->Prune(a,aLength,properties,*stat);
+>>>>>>> a102b5fdaa90e9e0395f74c31aa897ef4c3730b8:src/main.cpp
 			delete stat;
 		}
 
 		// function to count how mant were pruned, this will change for implimentation
+		//This takes just as long as pruning O(n) (minus the computation piece per n)
+		//We could do a reduce sum here
 		for(int x = 0;x<aLength;x++){ 
 			if(a[x].pruned==true) {prunedAmount+=1;
 			}
 		}
 		printf("Total Pruned Amount %ld\n",prunedAmount);
 
+		//This might be able to be optimized, but at the moment I really don't know
 		int bLength = aLength - prunedAmount;
 		printf("Amount left %i",bLength);
 		Agent* b = new Agent[bLength];
@@ -109,8 +133,6 @@ int main(int argc, char* argv[]){
 		for(int x = 0;x<aLength;x++){
 			if(!a[x].pruned){
 				b[currentBIndex++] = a[x];
-				//b[currentBIndex-1].direction = 1000;
-				//printf("a %f, b %f\n",a[x],b[currentBIndex-1]);
 			}
 		}
 		
@@ -120,22 +142,14 @@ int main(int argc, char* argv[]){
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;
 
+
 		delete[] a;
 		aLength = bLength*numberOfDirectionSpawn;
 		a = new Agent[aLength];
-		for(int x = 0;x<bLength;x++){
-			
-			int aIndex = x*numberOfDirectionSpawn;
-			for(int y = 0;y<numberOfDirectionSpawn;y++){
-				float newDirection = b[x].direction - directionSpawnRadius/2 + directionSpawnRadius/(numberOfDirectionSpawn-1) * y;
-				//a[aIndex+y] = Agent();
-				a[aIndex+y] = utility->AgentStep(b[x],newDirection,properties,map);
-				
-				//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
-			}
-			
-			
-		}
+
+		//Perform the step all in parallell
+		utility->StepAll(b,bLength,a,aLength,properties,map);
+		
 		
 		delete[] b;
 		loopAmount++;
@@ -151,6 +165,6 @@ int main(int argc, char* argv[]){
 
 
 void Usage(char* prog_name){
-	fprintf(stderr, "usage: %s <file_name> <starting_count> <starting_x> <starting_y> <direction_spawn_radius> <number_of_direction_spawn> <travel_distance> <start_velocity> <max_agent_count> <friction>\n",prog_name);
+	fprintf(stderr, "usage: %s <file_name> <starting_count> <starting_x> <starting_y> <direction_spawn_radius> <number_of_direction_spawn> <travel_distance> <start_velocity> <max_agent_count> <friction> <run_type>\n",prog_name);
 	exit(0);
 }
