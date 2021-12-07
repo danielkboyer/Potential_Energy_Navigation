@@ -3,7 +3,7 @@
 #include "Properties.h"
 #include "math.h"
 #include "GPU_Util.h"
-
+#include "random"
 
 
 void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
@@ -20,14 +20,37 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 //this will be done in serial
 
 
-void GPU_Util::Prune(Agent* agents,long count, long amountToPrune){
+void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     srand (100);
     long x = 0;
-    for(int i=0;i<agentsToPrune;i++){
-        x = rand()%numberAgents;
+    Shuffle(agents,count);
+    for(int i=0;i<count;i++){
         agents[x].pruned = true;
         //printf("ID pruned: %ld\n", x);
     }
+}
+
+
+int intRand(const int & min, const int & max) {
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<int> distribution(min,max);
+    return distribution(generator);
+}
+void SwapValue(Agent &a, Agent &b) {
+   Agent t = a;
+   a = b;
+   b = t;
+}
+
+void Shuffle(Agent* agents, int count){
+
+    for(int x = 0;x<count;x++){
+        int index1 = intRand(0,count-1);
+        int index2 = intRand(0,count-1);
+        SwapValue(agents[index1],agents[index2]);
+
+    }
+
 }
 
 //Must have a non null out agent

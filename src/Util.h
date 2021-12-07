@@ -4,7 +4,7 @@
 #include "Properties.h"
 class Util {
     public:
-        virtual void Prune(Agent* agents,long count, long amountToPrune) = 0;
+        virtual void Prune(Agent* agents, Agent* out,long count, long amountToPrune) = 0;
         virtual void StepAll(Agent* in,int inCount,Agent* out,int outCount, Properties properties, Map map) = 0;
 
     private:

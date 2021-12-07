@@ -88,11 +88,11 @@ int main(int argc, char* argv[]){
 		
 	
 		//******** PRUNING ********//
-		long prunedAmount = 0;	
 		long amountToPrune = max(aLength - maxAgentCount,(long)0);
 		printf("Amount to prune: %ld\n",amountToPrune);
-	
-		utility->Prune(a, aLength, long(amountToPrune));
+		int bLength = aLength - amountToPrune;
+		Agent* b = new Agent[bLength];
+		utility->Prune(a,b, aLength, long(amountToPrune));
 		/// Count up how many were pruned from prunning process
 		long prunedAmount_prunning = 0;
 		for(int x = 0;x<aLength;x++){ 
@@ -114,25 +114,8 @@ int main(int argc, char* argv[]){
 				maxDX = a[x].positionX;
 				maxDY = a[x].positionY;
 			}
-			// Count up how many were pruned
-			if(a[x].pruned==true) {
-				prunedAmount+=1;
-			}
 		}
-		printf("Total Pruned Amount %ld\n",prunedAmount);
 
-		// Make new array without prunned agents
-			// This might be able to be optimized, unsure how though
-		int bLength = aLength - prunedAmount;
-		printf("Amount left %i\n",bLength);
-		Agent* b = new Agent[bLength];
-		int currentBIndex = 0;
-		for(int x = 0;x<aLength;x++){
-			if(!a[x].pruned){
-				b[currentBIndex++] = a[x];
-			}
-		}
-		
 		//Write to file here, this is probbaly the same for each implimentation
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;

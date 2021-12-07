@@ -17,7 +17,7 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 	}
 }
 
-void GPU_Util::Prune(Agent* agents,long count, long amountToPrune){
+void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     
 }
 //Must have a non null out agent

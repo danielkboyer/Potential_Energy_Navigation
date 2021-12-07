@@ -4,7 +4,7 @@
 #include "math.h"
 #include "Util.h"
 #include "Serial_Util.h"
-
+#include "random"
 
 void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
     for(int x = 0;x<inCount;x++){
@@ -53,8 +53,31 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 //     //     //printf("ID pruned: %ld\n", x);
 //     // }
 // }
-void Serial_Util::Prune(Agent* agents,long count, long amountToPrune){
+void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     
+}
+
+
+int intRand(const int & min, const int & max) {
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<int> distribution(min,max);
+    return distribution(generator);
+}
+void SwapValue(Agent &a, Agent &b) {
+   Agent t = a;
+   a = b;
+   b = t;
+}
+
+void Shuffle(Agent* agents, int count){
+
+    for(int x = 0;x<count;x++){
+        int index1 = intRand(0,count-1);
+        int index2 = intRand(0,count-1);
+        SwapValue(agents[index1],agents[index2]);
+
+    }
+
 }
 //Must have a non null out agent
 Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){

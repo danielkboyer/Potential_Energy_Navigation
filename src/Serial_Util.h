@@ -4,7 +4,7 @@ class Serial_Util: public Util
 {
     public:
         
-        void Prune(Agent* agents,long count, long amountToPrune);
+        void Prune(Agent* agents, Agent* out,long count, long amountToPrune);
         void StepAll(Agent* in,int inCount, Agent* out, int outCount, Properties properties, Map map);
 
     private:

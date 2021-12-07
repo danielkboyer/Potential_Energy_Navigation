@@ -43,7 +43,7 @@ void MPI_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 
 
 
-void MPI_Util::Prune(Agent* agents,long count, long amountToPrune){
+void MPI_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     srand (100);
     long x = 0;
     for(int i=0;i<amountToPrune;i++){
@@ -75,18 +75,24 @@ Agent MPI_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties 
     
 }
 
-int intRand(const int & min, const int & max) {
+int intRand(const int & min, const int & max) 
+{
     static thread_local std::mt19937 generator;
     std::uniform_int_distribution<int> distribution(min,max);
     return distribution(generator);
+}
+void SwapValue(Agent &a, Agent &b) {
+   Agent t = a;
+   a = b;
+   b = t;
 }
 
 void Shuffle(Agent* agents, int count){
 
     for(int x = 0;x<count;x++){
-    int index1 = intRand(0,count-1);
-    int index2 = intRand(0,count-1);
-    swap<Agent>(agents[index1],agents[index2]);
+        int index1 = intRand(0,count-1);
+        int index2 = intRand(0,count-1);
+        SwapValue(agents[index1],agents[index2]);
 
     }
 
