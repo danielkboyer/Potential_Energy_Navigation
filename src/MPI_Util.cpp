@@ -10,6 +10,33 @@
 #include <random>
 #include <utility>
 using namespace std;
+
+
+
+
+int intRandMPI(const int & min, const int & max) 
+{
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<int> distribution(min,max);
+    return distribution(generator);
+}
+void SwapValueMPI(Agent &a, Agent &b) {
+   Agent t = a;
+   a = b;
+   b = t;
+}
+
+void ShuffleMPI(Agent* agents, int count){
+
+    for(int x = 0;x<count;x++){
+        int index1 = intRandMPI(0,count-1);
+        int index2 = intRandMPI(0,count-1);
+        SwapValueMPI(agents[index1],agents[index2]);
+
+    }
+
+}
+
 void MPI_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
 #if IS_MPI == 1
     /* Let the system do what it needs to start up MPI */
@@ -75,28 +102,6 @@ Agent MPI_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties 
     
 }
 
-int intRand(const int & min, const int & max) 
-{
-    static thread_local std::mt19937 generator;
-    std::uniform_int_distribution<int> distribution(min,max);
-    return distribution(generator);
-}
-void SwapValue(Agent &a, Agent &b) {
-   Agent t = a;
-   a = b;
-   b = t;
-}
-
-void Shuffle(Agent* agents, int count){
-
-    for(int x = 0;x<count;x++){
-        int index1 = intRand(0,count-1);
-        int index2 = intRand(0,count-1);
-        SwapValue(agents[index1],agents[index2]);
-
-    }
-
-}
 //must have out positionX and positionY populated
 Agent MPI_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
     out.height = map.GetHeight(out.positionX,out.positionY);

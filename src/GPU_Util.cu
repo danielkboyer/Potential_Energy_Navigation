@@ -6,6 +6,28 @@
 #include "random"
 
 
+int intRandGPU(const int & min, const int & max) {
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<int> distribution(min,max);
+    return distribution(generator);
+}
+void SwapValueGPU(Agent &a, Agent &b) {
+   Agent t = a;
+   a = b;
+   b = t;
+}
+
+void ShuffleGPU(Agent* agents, int count){
+
+    for(int x = 0;x<count;x++){
+        int index1 = intRandGPU(0,count-1);
+        int index2 = intRandGPU(0,count-1);
+        SwapValueGPU(agents[index1],agents[index2]);
+
+    }
+
+}
+
 void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
     for(int x = 0;x<inCount;x++){
 		int aIndex = x*properties.numberOfDirectionSpawn;
@@ -23,7 +45,7 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     srand (100);
     long x = 0;
-    Shuffle(agents,count);
+    ShuffleGPU(agents,count);
     for(int i=0;i<count;i++){
         agents[x].pruned = true;
         //printf("ID pruned: %ld\n", x);
@@ -31,27 +53,7 @@ void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
 }
 
 
-int intRand(const int & min, const int & max) {
-    static thread_local std::mt19937 generator;
-    std::uniform_int_distribution<int> distribution(min,max);
-    return distribution(generator);
-}
-void SwapValue(Agent &a, Agent &b) {
-   Agent t = a;
-   a = b;
-   b = t;
-}
 
-void Shuffle(Agent* agents, int count){
-
-    for(int x = 0;x<count;x++){
-        int index1 = intRand(0,count-1);
-        int index2 = intRand(0,count-1);
-        SwapValue(agents[index1],agents[index2]);
-
-    }
-
-}
 
 //Must have a non null out agent
 Agent GPU_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){

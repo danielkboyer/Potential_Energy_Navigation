@@ -6,6 +6,28 @@
 #include "Serial_Util.h"
 #include "random"
 
+int intRandSerial(const int & min, const int & max) {
+    static thread_local std::mt19937 generator;
+    std::uniform_int_distribution<int> distribution(min,max);
+    return distribution(generator);
+}
+void SwapValueSerial(Agent &a, Agent &b) {
+   Agent t = a;
+   a = b;
+   b = t;
+}
+
+void ShuffleSerial(Agent* agents, int count){
+
+    for(int x = 0;x<count;x++){
+        int index1 = intRandSerial(0,count-1);
+        int index2 = intRandSerial(0,count-1);
+        SwapValueSerial(agents[index1],agents[index2]);
+
+    }
+
+}
+
 void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
     for(int x = 0;x<inCount;x++){
 		int aIndex = x*properties.numberOfDirectionSpawn;
@@ -54,31 +76,34 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 //     // }
 // }
 void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
-    
-}
+    long keepAmount = count - amountToPrune;
 
+    ShuffleSerial(agents,count);
 
-int intRand(const int & min, const int & max) {
-    static thread_local std::mt19937 generator;
-    std::uniform_int_distribution<int> distribution(min,max);
-    return distribution(generator);
-}
-void SwapValue(Agent &a, Agent &b) {
-   Agent t = a;
-   a = b;
-   b = t;
-}
-
-void Shuffle(Agent* agents, int count){
-
+    vector<int> good;
+    vector<int> bad;
+    int currentIndex = 0;
     for(int x = 0;x<count;x++){
-        int index1 = intRand(0,count-1);
-        int index2 = intRand(0,count-1);
-        SwapValue(agents[index1],agents[index2]);
-
+        if(isnan(agents[x].velocity) || agents[x].velocity <= 0){
+            bad.push_back(x);
+        }
+        else{
+            good.push_back(x);
+        }
     }
 
+    
+    for(int x =0 ;x<keepAmount;x++){
+        if(x >= good.size()){
+            out[x] = agents[bad[x-good.size()]];
+            continue;
+        }
+        out[x] = agents[good[x]];
+    }
 }
+
+
+
 //Must have a non null out agent
 Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
     //printf("Before\n");
