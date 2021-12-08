@@ -83,6 +83,7 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
     vector<int> good;
     vector<int> bad;
     int currentIndex = 0;
+    
     for(int x = 0;x<count;x++){
         if(isnan(agents[x].velocity) || agents[x].velocity <= 0){
             bad.push_back(x);
@@ -100,6 +101,7 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
         }
         out[x] = agents[good[x]];
     }
+    out[0].percentage = count/bad.size();
 }
 
 

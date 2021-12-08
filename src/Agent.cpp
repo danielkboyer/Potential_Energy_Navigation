@@ -17,9 +17,10 @@ Agent::Agent(Agent& agent){
     Id = agent.Id;
     parentId = agent.parentId;
     pruned = agent.pruned;
+    percentage = agent.percentage;
 }
-Agent::Agent(float direction, float positionX, float positionY, float height, float velocity, float time, int Id, int parentId,bool pruned = false):direction(direction),positionX(positionX),positionY(positionY),
-height(height),velocity(velocity),time(time),Id(Id),parentId(parentId),pruned(pruned){
+Agent::Agent(float direction, float positionX, float positionY, float height, float velocity, float time, int Id, int parentId,float percentage,bool pruned = false):direction(direction),positionX(positionX),positionY(positionY),
+height(height),velocity(velocity),time(time),Id(Id),parentId(parentId),pruned(pruned),percentage(percentage){
 }
 
 

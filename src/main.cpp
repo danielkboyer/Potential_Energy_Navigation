@@ -55,7 +55,7 @@ int main(int argc, char* argv[]){
 	printf("Starting height: %f\n",startingHeight);
 
 	for(int x = 0;x<startingCount;x++){
-		a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,false);
+		a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
 		currentDirection+= radiusInterval;
 	}
 	
