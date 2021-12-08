@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string>
 #include <math.h>
+#include <omp.h>
+
 
 #include "Agent.h"
 #include "Util.h"
@@ -15,7 +17,7 @@ void Usage(char* prog_name);
 
 int main(int argc, char* argv[]){
 
-	if(argc != 12)
+	if(argc < 12 || argc>14)
 		Usage(argv[0]);
 	//********** Collect arguments **********
 	string fileName = argv[1];
@@ -29,6 +31,11 @@ int main(int argc, char* argv[]){
 	long maxAgentCount = stol(argv[9]);
 	float friction = stof(argv[10]);
 	int runType = stoi(argv[11]);
+	// get threads for Pragma omp
+	int threadCount = 0;
+	if (argc==13)
+		threadCount = stoi(argv[12]);
+
 	//********** END Collect arguments **********
 
 	printf("Initializing FileWriter\n");
@@ -43,7 +50,7 @@ int main(int argc, char* argv[]){
 
 	printf("Initializing Properties\n");
 	//Initialize properties
-	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),numberOfDirectionSpawn,directionSpawnRadius);
+	Properties properties = *new Properties(threadCount,friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),numberOfDirectionSpawn,directionSpawnRadius);
 
 	// Initialize starting agents at starting position serially
 	printf("Initializing %ld Starting Agents at (%d,%d), v=%f\n",startingCount,startingX,startingY,startVelocity);

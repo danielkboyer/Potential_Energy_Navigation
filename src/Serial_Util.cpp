@@ -1,3 +1,5 @@
+#include <omp.h>
+
 #include "Agent.h"
 #include "Map.h"
 #include "Properties.h"
@@ -29,13 +31,20 @@ void ShuffleSerial(Agent* agents, int count){
 }
 
 void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
-    for(int x = 0;x<inCount;x++){
-		int aIndex = x*properties.numberOfDirectionSpawn;
-		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
-			float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+    int x, y, aIndex;
+    float newDirection;
+#   pragma omp parallel num_threads(properties.threadCount) default(none) private(x,y,aIndex,newDirection) shared(out,in,properties,map,inCount)
+    // printf("Thread rank: %d\n", omp_get_thread_num());
+    //printf("parrallel or not %d \n", properties.threadCount);
+    
+    // make this for loop parallel, this is the outer loop of the sorting function
+#   pragma omp for
+    for(x = 0;x<inCount;x++){
+		aIndex = x*properties.numberOfDirectionSpawn;
+		for(y = 0;y<properties.numberOfDirectionSpawn;y++){
+			newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
 			//a[aIndex+y] = Agent();
 			out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
-            
 			//printf("Agent position %f,%f, v=%f\n",out[aIndex+y].positionX,out[aIndex+y].positionY,out[aIndex+y].velocity);
 		}
 	}
@@ -78,13 +87,10 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 // }
 void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     long keepAmount = count - amountToPrune;
-
     ShuffleSerial(agents,count);
-
     vector<int> good;
     vector<int> bad;
     int currentIndex = 0;
-    
     for(int x = 0;x<count;x++){
         if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
             agents[x].pruned = true;
@@ -94,7 +100,6 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
             good.push_back(x);
         }
     }
-
     for(int x =0 ;x<keepAmount;x++){
         if(x >= good.size()){
             out[x] = agents[bad[x-good.size()]];
@@ -102,7 +107,6 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
         }
         out[x] = agents[good[x]];
     }
-
     out[0].percentage = ((float)(bad.size()))/(float)count;
 }
 

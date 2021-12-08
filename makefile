@@ -26,12 +26,19 @@ ODIR = obj_gpu
 CFLAGS = -g
 GPUNAME = GPU_Util.cu
 endif
+ifeq ($(OMP),true)
+OUT = lib_omp
+ODIR = obj_omp
+CFLAGS = -g -fopenmp
+FLAGSRUNME = -g -fopenmp
+endif
+
 # $(SDIR)/%.o : $(SDIR)/%.cpp
 # 	$(CC) -c $(SDIR)
 # edit : $(ODIR)/%.o
 $(OUT)/run_me : $(ODIR)/$(MAINFILE).o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
        $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/Serial_Util.o $(ODIR)/Agent.o $(ODIR)/GPU_Util.o $(ODIR)/MPI_Util.o
-	$(CC) -o $(OUT)/run_me $(ODIR)/$(MAINFILE).o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
+	$(CC) $(FLAGSRUNME) -o $(OUT)/run_me $(ODIR)/$(MAINFILE).o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Properties.o \
         $(ODIR)/Util.o $(ODIR)/FileWriter.o $(ODIR)/Serial_Util.o $(ODIR)/Agent.o $(ODIR)/GPU_Util.o $(ODIR)/MPI_Util.o
 
 $(ODIR)/$(MAINFILE).o : $(SDIR)/$(MAINFILE).cpp $(SDIR)/Agent.h $(SDIR)/Util.h $(SDIR)/FileWriter.h $(SDIR)/Serial_Util.h $(SDIR)/GPU_Util.h

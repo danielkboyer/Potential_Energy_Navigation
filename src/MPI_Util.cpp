@@ -34,16 +34,16 @@ void ShuffleMPI(Agent* agents, int count){
 }
 
 void MPI_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
-    int localInCount = inCount/comm_sz;
-    for(int x = my_rank*localInCount; x < localInCount + my_rank*localInCount; x++){
-		int aIndex = x*properties.numberOfDirectionSpawn;
-		// printf("aIndex %i, and my rank %i\n",aIndex,my_rank);
-        for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
-			float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
-			//a[aIndex+y] = Agent();
-			out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
-        }
-    }
+    // int localInCount = inCount/comm_sz;
+    // for(int x = my_rank*localInCount; x < localInCount + my_rank*localInCount; x++){
+	// 	int aIndex = x*properties.numberOfDirectionSpawn;
+	// 	// printf("aIndex %i, and my rank %i\n",aIndex,my_rank);
+    //     for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
+	// 		float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
+	// 		//a[aIndex+y] = Agent();
+	// 		out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
+    //     }
+    // }
     
 
     // // for loop 0 to partition

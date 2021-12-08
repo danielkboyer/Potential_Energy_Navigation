@@ -9,6 +9,10 @@
 #include "Serial_Util.h"
 #include "vector"
 
+/* Build a derived datatype for distributing the Agent data */
+void Agent_mpi_type(float direction_p, float positionX_p, float positionY_p, float height_p, float velocity_p, float time_p, int Id_p, int parentId_p,float percentage_p,bool pruned_p,MPI_Datatype* Agent_mpi_t_p);
+
+
 // // create agent class for MPI
 // this creates a serialized version of the class that we can then pass to threads
 // MPI_Type_struct(count,blocklens,indices,old_types,&new_type);
@@ -69,7 +73,7 @@ int main(int argc, char* argv[]){
     if(my_rank == 0) {
         // Initialize starting agents at starting position serially
         printf("Initializing %ld Starting Agents at (%d,%d), v=%f\n",startingCount,startingX,startingY,startVelocity);
-        Agent* a = new Agent[startingCount];
+        Agent* a = new Agent_mpi_t_p[startingCount];
         long startAgentId = 0;
         float radiusInterval = 2*M_PI/startingCount;
         float currentDirection = 0;
@@ -77,7 +81,8 @@ int main(int argc, char* argv[]){
         printf("Starting height: %f\n",startingHeight);
 
         for(int x = 0;x<startingCount;x++){
-            a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
+            Agent* y = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
+            a[x] = Agent_mpi_type(y.direction, y.positionX, y.positionY, y.height, y.velocity, y.time, y.Id, y.parentId,y.percentage,y.pruned,&Agent_mpi_t_p);
             currentDirection+= radiusInterval;
         }
     }
@@ -216,3 +221,61 @@ void Usage(char* prog_name){
 	fprintf(stderr, "usage: %s <file_name> <starting_count> <starting_x> <starting_y> <direction_spawn_radius> <number_of_direction_spawn> <travel_distance> <start_velocity> <max_agent_count> <friction> <run_type>\n",prog_name);
 	exit(0);
 }
+
+
+
+/*------------------------------------------------------------------
+ * Function:     Build_mpi_type
+ * Purpose:      Build a derived datatype so that the three
+ *               input values can be sent in a single message.
+ * Input args:   a_p:  pointer to left endpoint
+ *               b_p:  pointer to right endpoint
+ *               n_p:  pointer to number of trapezoids
+ * Output args:  input_mpi_t_p:  the new MPI datatype
+ */
+void Agent_mpi_type(float* direction_p, 
+                    float* positionX_p, 
+                    float* positionY_p, 
+                    float* height_p, 
+                    float* velocity_p, 
+                    float* time_p, 
+                    int* Id_p, 
+                    int* parentId_p,
+                    float* percentage_p,
+                    bool* pruned_p,
+                    MPI_Datatype* Agent_mpi_t_p /* out */); {
+
+    int array_of_blocklengths[10] = {1, 1, 1,1,1,1,1,1,1,1,1};
+    MPI_Datatype array_of_types[10] = {MPI_FLOAT, MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_INT,MPI_INT,MPI_FLOAT, MPI_CXX_BOOL};
+    MPI_Aint direction_addr, positionX_addr, positionY_addr, height_addr, velocity_addr, time_addr, Id_addr, parentId_addr, percentage_addr, pruned_addr;
+    MPI_Aint array_of_displacements[10] = {0};
+
+    MPI_Get_address(direction_p, &direction_addr);
+    MPI_Get_address(positionX_p, &positionX_addr);
+    MPI_Get_address(positionY_p, &positionY_addr);
+    MPI_Get_address(height_p, &height_addr);
+    MPI_Get_address(velocity_p, &velocity_addr);
+    MPI_Get_address(time_p, &time_addr);
+    MPI_Get_address(Id_p, &Id_addr);
+    MPI_Get_address(parentId_p, &parentId_addr);
+    MPI_Get_address(percentage_p, &percentage_addr);
+    MPI_Get_address(pruned_p, &pruned_addr);
+
+    array_of_displacements[1] = positionX_addr-direction_addr;
+    array_of_displacements[2] = positionY_addr-direction_addr;
+    array_of_displacements[3] = height_addr-direction_addr;
+    array_of_displacements[4] = velocity_addr-direction_addr;
+    array_of_displacements[5] = time_addr-direction_addr;
+    array_of_displacements[6] = Id_addr-direction_addr;
+    array_of_displacements[7] = parentId_addr-direction_addr;
+    array_of_displacements[8] = percentage_addr-direction_addr;
+    array_of_displacements[9] = pruned_addr-direction_addr;
+
+    MPI_Type_create_struct(10, array_of_blocklengths,
+        array_of_displacements, array_of_types,
+        Agent_mpi_t_p);
+    MPI_Type_commit(Agent_mpi_t_p);
+    }  /* Agent_mpi_t_p */
+
+
+
