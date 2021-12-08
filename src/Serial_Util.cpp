@@ -5,7 +5,7 @@
 #include "Util.h"
 #include "Serial_Util.h"
 #include "random"
-
+#include "math.h"
 int intRandSerial(const int & min, const int & max) {
     static thread_local std::mt19937 generator;
     std::uniform_int_distribution<int> distribution(min,max);
@@ -101,7 +101,8 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
         }
         out[x] = agents[good[x]];
     }
-    out[0].percentage = count/bad.size();
+    int divider = max((int)(bad.size()),1);
+    out[0].percentage = count/divider;
 }
 
 
