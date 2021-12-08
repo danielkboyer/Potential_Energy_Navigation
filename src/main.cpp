@@ -71,9 +71,11 @@ int main(int argc, char* argv[]){
 	Util *utility;
 
 	if(runType == 0){
+		printf("Using Serial\n");
 	utility = new Serial_Util();
 	}
 	else if(runType == 1){
+		printf("Using GPU\n");
 		utility = new GPU_Util();
 	}
 	else{	
