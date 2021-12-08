@@ -35,7 +35,8 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 			float newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
 			//a[aIndex+y] = Agent();
 			out[aIndex+y] = AgentStep(in[x],newDirection,properties,map);
-			//printf("Agent position %f,%f\n",a[aIndex+y].positionX,a[aIndex+y].positionY);
+            
+			//printf("Agent position %f,%f, v=%f\n",out[aIndex+y].positionX,out[aIndex+y].positionY,out[aIndex+y].velocity);
 		}
 	}
 }
@@ -85,7 +86,8 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
     int currentIndex = 0;
     
     for(int x = 0;x<count;x++){
-        if(isnan(agents[x].velocity) || agents[x].velocity <= 0){
+        if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
+            agents[x].pruned = true;
             bad.push_back(x);
         }
         else{
@@ -101,8 +103,8 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
         }
         out[x] = agents[good[x]];
     }
-    int divider = max((int)(bad.size()),1);
-    out[0].percentage = count/divider;
+
+    out[0].percentage = ((float)(bad.size()))/(float)count;
 }
 
 
@@ -113,7 +115,10 @@ Agent Serial_Util::AgentStep(Agent in, float newDirection, Properties properties
     Agent out;
     out.pruned = false;
     //printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out.positionX,out.positionY,out.velocity,out.height,properties.gravity,properties.friction);
-    
+    if(in.pruned == true){
+        out.pruned = true;
+        return out;
+    }
     out = AgentTravel(in,out,newDirection,properties,map);
     //printf("After %f, %f, %f, %f\n",out.positionX,out.positionY,out.time,out.direction);
     out = AgentHeight(in,out,newDirection,properties,map);

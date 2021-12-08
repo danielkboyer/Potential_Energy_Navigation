@@ -9,6 +9,8 @@
 #include "Serial_Util.h"
 #include "GPU_Util.h"
 #include "MPI_Util.h"
+#include "vector"
+
 void Usage(char* prog_name);
 
 int main(int argc, char* argv[]){
@@ -82,40 +84,64 @@ int main(int argc, char* argv[]){
 	float maxDistance = 0;
 	float maxDX = -1;
 	float maxDY = -1;
+	bool serialPrune = false;
 	while(aLength > 0){
 		//Start Loop
 		printf("\nALength: %ld\nLoop Number:%d\n",aLength,loopAmount);
 		
-	
+
+		
 		//******** PRUNING ********//
-		long amountToPrune = max(aLength - maxAgentCount,(long)0);
-		printf("Amount to prune: %ld\n",amountToPrune);
-		int bLength = aLength - amountToPrune;
-		Agent* b = new Agent[bLength];
-		utility->Prune(a,b, aLength, long(amountToPrune));
-		/// Count up how many were pruned from prunning process
-		long prunedAmount_prunning = 0;
-		for(int x = 0;x<aLength;x++){ 
-			if(a[x].pruned==true) {
-				prunedAmount_prunning +=1;
+		long amountToPrune;
+		int bLength;
+		Agent* b;
+		if(serialPrune == false)
+		{
+			amountToPrune = max(aLength - maxAgentCount,(long)0);
+			printf("Amount to prune: %ld\n",amountToPrune);
+			bLength = aLength - amountToPrune;
+			b = new Agent[bLength];
+			utility->Prune(a,b, aLength, long(amountToPrune));
+
+			printf("Percentage of negative velocities %f\n",b[0].percentage);
+			if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
+				serialPrune = true;
 			}
 		}
-		printf("Pruned Amount from RandPrune %ld\n",prunedAmount_prunning);
+		else{
 
+			vector<int> good;
+			for(int x = 0;x<aLength;x++){
+				if(a[x].pruned == false){
+					good.push_back(x);
+				}
+			}
+			bLength = good.size();
+			b = new Agent[bLength];
+			for(int x = 0;x<bLength;x++){
+				b[x] = a[good[x]];
+			}
+
+			if(bLength > maxAgentCount)
+			{
+				serialPrune = false;
+			}
+
+		}
 		//******** END PRUNING ********//
 		
 		// Count how mant were pruned, this will change for implimentation
 			// This takes just as long as pruning O(n) (minus the computation piece per n)
 			// We could do a reduce sum here
-		for(int x = 0;x<aLength;x++){ 
+		for(int x = 0;x<bLength;x++){ 
 			// Find which location has the max and what the max is, maybe make a max class
-			if(a[x].DistanceFrom(properties.agentStartX,properties.agentStartY) > maxDistance){
-				maxDistance = a[x].DistanceFrom(properties.agentStartX,properties.agentStartY);
-				maxDX = a[x].positionX;
-				maxDY = a[x].positionY;
+			if(b[x].DistanceFrom(properties.agentStartX,properties.agentStartY) > maxDistance){
+				maxDistance = b[x].DistanceFrom(properties.agentStartX,properties.agentStartY);
+				maxDX = b[x].positionX;
+				maxDY = b[x].positionY;
 			}
 		}
-
+		printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 		//Write to file here, this is probbaly the same for each implimentation
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;
