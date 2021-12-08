@@ -1,3 +1,4 @@
 lib/run_me simple_env.txt 10 10 10 1.5 3 .2 1 30000 .98 0
+mpiexec -n 4 lib_mpi/run_me simple_env.txt 10 10 10 1.5 3 .2 1 30000 .98 2
 make
 make clean

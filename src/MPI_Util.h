@@ -1,6 +1,6 @@
 #pragma once
 #include "Util.h"
-class MPI_Util: public Util
+class MPI_Util
 {
     public:
         

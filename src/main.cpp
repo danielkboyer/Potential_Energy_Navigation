@@ -8,8 +8,8 @@
 #include "FileWriter.h"
 #include "Serial_Util.h"
 #include "GPU_Util.h"
-#include "MPI_Util.h"
 #include "vector"
+
 
 void Usage(char* prog_name);
 
@@ -30,8 +30,6 @@ int main(int argc, char* argv[]){
 	float friction = stof(argv[10]);
 	int runType = stoi(argv[11]);
 	//********** END Collect arguments **********
-
-	
 
 	printf("Initializing FileWriter\n");
 	//Initialize file_Writer
@@ -60,7 +58,7 @@ int main(int argc, char* argv[]){
 		a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
 		currentDirection+= radiusInterval;
 	}
-	
+
 	// initialize the utility input from the user
 	printf("Initializing Utility\n");
 	Util *utility;
@@ -70,9 +68,6 @@ int main(int argc, char* argv[]){
 	}
 	else if(runType == 1){
 		utility = new GPU_Util();
-	}
-	else if(runType == 2){
-		utility = new MPI_Util();
 	}
 	else{	
 		printf("invalid Utility should be 0 for serial, 1 for GPU, 2 for MPI");
@@ -90,7 +85,6 @@ int main(int argc, char* argv[]){
 		printf("\nALength: %ld\nLoop Number:%d\n",aLength,loopAmount);
 		
 
-		
 		//******** PRUNING ********//
 		long amountToPrune;
 		int bLength;
@@ -156,7 +150,6 @@ int main(int argc, char* argv[]){
 		delete[] b;
 		loopAmount++;
 	}
-	
 	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
 }

@@ -95,7 +95,6 @@ void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune)
         }
     }
 
-    
     for(int x =0 ;x<keepAmount;x++){
         if(x >= good.size()){
             out[x] = agents[bad[x-good.size()]];
