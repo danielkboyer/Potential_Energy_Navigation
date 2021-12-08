@@ -9,6 +9,11 @@
 #include "Serial_Util.h"
 #include "vector"
 
+
+
+// have function that converts agent to struct and then converts struct back to agent
+// this will esentially serialize the class and then de serialize it
+
 /* Build a derived datatype for distributing the Agent data */
 void Agent_mpi_type(float direction_p, float positionX_p, float positionY_p, float height_p, float velocity_p, float time_p, int Id_p, int parentId_p,float percentage_p,bool pruned_p,MPI_Datatype* Agent_mpi_t_p);
 
@@ -48,7 +53,10 @@ int main(int argc, char* argv[]){
 	int runType = stoi(argv[11]);
 	//********** END Collect arguments **********
     int my_rank, comm_sz;
-
+    
+    double start_agent_comp, finish_agent_comp, loc_elapsed_agent_comp, agent_comp;
+    double start_2, finish_2, loc_elapsed_2, elapsed_2;
+    double start_3, finish_3, loc_elapsed_3, elapsed_3;
     /* Let the system do what it needs to start up MPI */
     MPI_Init(NULL,NULL);
     /* Get my process rank */
@@ -63,7 +71,7 @@ int main(int argc, char* argv[]){
 
 	printf("Initializing Properties\n");
 	//Initialize properties
-	Properties properties = *new Properties(friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),numberOfDirectionSpawn,directionSpawnRadius);
+	Properties properties = *new Properties(comm_sz,friction,travelDistance,maxAgentCount,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),numberOfDirectionSpawn,directionSpawnRadius);
     
     // initialize the utility input from the user
 	printf("Initializing Utility\n");
@@ -73,7 +81,7 @@ int main(int argc, char* argv[]){
     if(my_rank == 0) {
         // Initialize starting agents at starting position serially
         printf("Initializing %ld Starting Agents at (%d,%d), v=%f\n",startingCount,startingX,startingY,startVelocity);
-        Agent* a = new Agent_mpi_t_p[startingCount];
+        Agent* a = new Agent[startingCount];
         long startAgentId = 0;
         float radiusInterval = 2*M_PI/startingCount;
         float currentDirection = 0;
@@ -81,7 +89,7 @@ int main(int argc, char* argv[]){
         printf("Starting height: %f\n",startingHeight);
 
         for(int x = 0;x<startingCount;x++){
-            Agent* y = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
+            Agent y = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
             a[x] = Agent_mpi_type(y.direction, y.positionX, y.positionY, y.height, y.velocity, y.time, y.Id, y.parentId,y.percentage,y.pruned,&Agent_mpi_t_p);
             currentDirection+= radiusInterval;
         }
@@ -113,18 +121,23 @@ int main(int argc, char* argv[]){
         //******** PRUNING ON THREADS********//
         long amountToPrune_loc = 0;
         int bLength_loc = 0;
+        int extraALength;
+        int extraAmountToPrune;
         Agent* b_loc;
         if (my_rank == 0) {
             if(serialPrune == 0) {
                 amountToPrune = max(aLength - maxAgentCount,(long)0);
                 printf("Amount to prune: %ld\n",amountToPrune);
                 bLength = aLength - amountToPrune;
-                b = new Agent[bLength];
                 // make variables for local computations
                 aLength_loc = floor(amountToPrune/comm_sz);
+                printf("aLength_loc = %i ", aLength_loc);
                 amountToPrune_loc = floor(amountToPrune/comm_sz);
-                int extraAmountToPrune = amountToPrune - comm_sz*amountToPrune_loc;
-                int extraALength = aLength - comm_sz*aLength_loc;
+                printf("amountToPrune_loc = %i ", amountToPrune_loc);
+                extraAmountToPrune = amountToPrune - comm_sz*amountToPrune_loc;
+                extraALength = aLength - comm_sz*aLength_loc;
+                bLength_loc = aLength_loc - amountToPrune_loc;
+                printf("bLength_loc = %i ", bLength_loc);
             }
 
         }
@@ -134,18 +147,11 @@ int main(int argc, char* argv[]){
         MPI_Bcast(extraAmountToPrune,1,MPI_INT,0,MPI_COMM_WORLD);
         MPI_Bcast(extraALength,1,MPI_INT,0,MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(bLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
+        b = new Agent[bLength];
 
-        if (my_rank != (comm_sz-1)){
-            memcpy(a_loc, a[aLength_loc*my_rank], aLength_loc);
-            b_loc = new Agent[aLength_loc-amountToPrune_loc];
-            memcpy( void* dest, const void* src, std::size_t count );
-        }
-        // make data with extras
-        else {
-            memcpy(a_loc, a[aLength_loc*my_rank], aLength_loc + extraALength);
-            b_loc = new Agent[aLength_loc-amountToPrune_loc];
-        }
 		//******** END PRUNING ON THREADS********//
+
 
         utility->Prune(a_loc, b_loc, aLength_loc, long(amountToPrune_loc));
         

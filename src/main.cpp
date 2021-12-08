@@ -133,11 +133,12 @@ int main(int argc, char* argv[]){
 		}
 		//******** END PRUNING ********//
 		
-		// Count how mant were pruned, this will change for implimentation
-			// This takes just as long as pruning O(n) (minus the computation piece per n)
-			// We could do a reduce sum here
+		// maybe only do this once at the end of the function? 
+		// Count how mant were pruned
+			// This takes just as long as pruning O(n) (minus the computation piece per n) 
+			// but parallel is also serial from critical section 
 		for(int x = 0;x<bLength;x++){ 
-			// Find which location has the max and what the max is, maybe make a max class
+			// Find which location has the max and what the max is
 			if(b[x].DistanceFrom(properties.agentStartX,properties.agentStartY) > maxDistance){
 				maxDistance = b[x].DistanceFrom(properties.agentStartX,properties.agentStartY);
 				maxDX = b[x].positionX;

@@ -34,13 +34,13 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
     int x, y, aIndex;
     float newDirection;
 #   pragma omp parallel num_threads(properties.threadCount) default(none) private(x,y,aIndex,newDirection) shared(out,in,properties,map,inCount)
-    // printf("Thread rank: %d\n", omp_get_thread_num());
-    //printf("parrallel or not %d \n", properties.threadCount);
+    printf("Thread rank: %d\n", omp_get_thread_num());
     
     // make this for loop parallel, this is the outer loop of the sorting function
 #   pragma omp for
     for(x = 0;x<inCount;x++){
-		aIndex = x*properties.numberOfDirectionSpawn;
+        //printf("parrallel or not %d \n", properties.threadCount);
+        aIndex = x*properties.numberOfDirectionSpawn;
 		for(y = 0;y<properties.numberOfDirectionSpawn;y++){
 			newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
 			//a[aIndex+y] = Agent();
