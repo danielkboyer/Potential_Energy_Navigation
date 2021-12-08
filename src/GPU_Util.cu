@@ -6,6 +6,8 @@
 #include "random"
 
 
+__global__
+void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map);
 int intRandGPU(const int & min, const int & max) {
     static thread_local std::mt19937 generator;
     std::uniform_int_distribution<int> distribution(min,max);
@@ -28,7 +30,49 @@ void ShuffleGPU(Agent* agents, int count){
 
 }
 
+__global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, Properties* properties, Map* map){
+    int x = blockDim.x;
+    int y = blockDim.y;
+    int z = blockDim.z;
+
+    int x_b = blockIdx.x;
+    int y_b = blockIdx.y;
+    int z_b = blockIdx.z;
+    
+    int x_t = threadIdx.x;
+    int y_t = threadIdx.y;
+    int z_t = threadIdx.z;
+
+    //int mainId = 
+    //printf("x:%i,y:%i,z:%i  x_t:%i,y_t:%i,z_y:%i\n",x,y,z,x_t,y_t,z_t);
+
+
+}
 void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
+
+    //10
+    //10
+    //10
+    printf("TETSSTSTS hh\n");
+    dim3 DimGrid(1,1,1);
+    dim3 DimBlock(32,1,1);
+
+    Agent* in_d;
+    Agent* out_d;
+    Properties* properties_d;
+    Map* map_d;
+    cudaMalloc((void **)&properties_d,sizeof(Properties));
+    cudaMalloc((void **)&map_d,sizeof(Map));
+    cudaMalloc((void **)&out_d,outCount*sizeof(Agent));
+    cudaMalloc((void **)&in_d,inCount*sizeof(Agent));
+    cudaMemcpy(map_d,&map,sizeof(Map),cudaMemcpyHostToDevice);
+    cudaMemcpy(properties_d,&properties,sizeof(Properties),cudaMemcpyHostToDevice);
+    cudaMemcpy(in_d,in,inCount*sizeof(Agent),cudaMemcpyHostToDevice);
+
+    GPU_Step<<<DimGrid,DimBlock>>>(in_d,inCount,out_d,outCount,properties_d,map_d);
+
+    cudaDeviceSynchronize();
+    printf("Cuda done\n");
     for(int x = 0;x<inCount;x++){
 		int aIndex = x*properties.numberOfDirectionSpawn;
 		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
@@ -39,7 +83,7 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 		}
 	}
 }
-//this will be done in serial
+
 
 
 void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
@@ -56,7 +100,8 @@ void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
 
 
 //Must have a non null out agent
-Agent GPU_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
+
+__device__ Agent GPU_Util::AgentStep(Agent in, float newDirection, Properties properties, Map map){
     //printf("Before\n");
     Agent out;
     out.pruned = false;
@@ -70,7 +115,7 @@ Agent GPU_Util::AgentStep(Agent in, float newDirection, Properties properties, M
     
 }
 
-Agent GPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
+__device__ Agent GPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties properties, Map map){  
     out.positionX = in.positionX + cos(newDirection) * properties.travelDistance;
     out.positionY = in.positionY + sin(newDirection) * properties.travelDistance;
     //printf("Agent position %f,%f\n",out->positionX,out->positionY);
@@ -79,7 +124,8 @@ Agent GPU_Util::AgentTravel(Agent in, Agent out, float newDirection, Properties 
     
 }
 //must have out positionX and positionY populated
-Agent GPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
+
+__device__ Agent GPU_Util::AgentHeight(Agent in, Agent out, float newDirection, Properties properties, Map map){
     
     out.height = map.GetHeight(out.positionX,out.positionY);
     if(isnan(out.height) || (2*properties.gravity*(in.height - out.height) + in.velocity*in.velocity) < 0){

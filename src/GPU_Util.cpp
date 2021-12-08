@@ -6,6 +6,7 @@
 #include "GPU_Util.h"
 
 void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
+    printf("TETSSSSSSSSSSSSS");
     for(int x = 0;x<outCount;x++){
 		int aIndex = x*properties.numberOfDirectionSpawn;
 		for(int y = 0;y<properties.numberOfDirectionSpawn;y++){
