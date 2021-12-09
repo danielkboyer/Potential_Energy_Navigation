@@ -179,7 +179,8 @@ int main(int argc, char* argv[]){
     int extraALength=0;
     int extraAmountToPrune=0;
     int aLength_loc = 0;
-	while(aLength > 0){
+	MPI_Barrier(MPI_COMM_WORLD);
+    while(aLength > 0){
 		//Start Loop
         
         // broadcast this variable out at the start of each loop from rank 0
@@ -194,15 +195,14 @@ int main(int argc, char* argv[]){
         if(my_rank == 0) {
             printf("\nALength: %ld\nLoop Number:%d\n",aLength, loopAmount);
         }
-
+        amountToPrune = max(aLength - maxAgentCount,(long)0);
+        bLength = aLength - amountToPrune;
         //******** PRUNING ON THREADS********//
         if (my_rank == 0) {
             if(serialPrune == 0) {
-                amountToPrune = max(aLength - maxAgentCount,(long)0);
                 printf("Amount to prune: %ld\n",amountToPrune);
-                bLength = aLength - amountToPrune;
                 // make variables for local computations
-                aLength_loc = floor(amountToPrune/comm_sz);
+                aLength_loc = floor(aLength/comm_sz);
                 printf("aLength_loc = %i \n", aLength_loc);
                 amountToPrune_loc = floor(amountToPrune/comm_sz);
                 printf("amountToPrune_loc = %i \n", amountToPrune_loc);
@@ -212,6 +212,7 @@ int main(int argc, char* argv[]){
                 printf("bLength_loc = %i ", bLength_loc);
             }
         }
+
         // send things to all ranks and then prune as long as we are not doing the serial prune
         if(serialPrune == 0) {
             MPI_Bcast(&aLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -231,6 +232,7 @@ int main(int argc, char* argv[]){
             a_loc = new struct agent_type[aLength_loc];
             class Agent* b_agent_loc;
             b_agent_loc = new class Agent[aLength_loc - pruneAmount_l];
+
             if(my_rank == 0){
                 struct agent_type* a_struct = new struct agent_type[aLength];
 
@@ -241,24 +243,33 @@ int main(int argc, char* argv[]){
                 int counts[comm_sz];
                 int displacements[comm_sz];
                 for(int x = 0;x<comm_sz;x++){
-                    counts[x] = amountToPrune_loc;
-                    displacements[x] = x*amountToPrune_loc;
+                    counts[x] = aLength_loc;
+                    displacements[x] = aLength_loc*x;
                 }
-                counts[comm_sz-1] += extraAmountToPrune;
+                counts[comm_sz-1] += extraALength;
                 MPI_Scatterv(a_struct,counts,displacements,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
                 delete[] a_struct;
             }
-            MPI_Scatterv(NULL,NULL,NULL,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
 
+            else {
+                MPI_Scatterv(NULL,NULL,NULL,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
+            }
+            
+            MPI_Barrier(MPI_COMM_WORLD);
             // convert a_loc from struct to agent for the pruning process          
             class Agent* a_agent_loc = new class Agent[aLength_loc];
             for(int x = 0;x<aLength_loc;x++){
                     a_agent_loc[x] = StructToAgent(a_loc[x]);
             }
             delete[] a_loc;
+            
             // Do the actual pruning on each thread on the chunk they have been given
             utility->Prune(a_agent_loc, b_agent_loc, aLength_loc, long(pruneAmount_l));
-            
+
+            MPI_Barrier(MPI_COMM_WORLD);
+            printf("my rank %i,aLength_loc %i, pruneAmount_l %i,  \n",my_rank,aLength_loc,pruneAmount_l);
+            MPI_Barrier(MPI_COMM_WORLD);
+
             struct agent_type* b_loc = new struct agent_type[aLength_loc - pruneAmount_l];
             // convert the agent b_loc to struct for gathering with MPI
             for(int x = 0;x<aLength_loc - pruneAmount_l;x++){
@@ -272,11 +283,10 @@ int main(int argc, char* argv[]){
                 int counts[comm_sz];
                 int displacements[comm_sz];
                 for(int x = 0;x<comm_sz;x++){
-                    counts[x] = amountToPrune_loc;
-                    displacements[x] = x*amountToPrune_loc;
+                    counts[x] = bLength_loc;
+                    displacements[x] = x*bLength_loc;
                 }
-                counts[comm_sz-1] += extraAmountToPrune;
-
+                counts[comm_sz-1] += extraALength-extraAmountToPrune;
                 MPI_Gatherv(b_loc,aLength_loc-pruneAmount_l,agent_type,b_struct,counts,displacements,agent_type,0,MPI_COMM_WORLD);
 
                 b = new class Agent[bLength];
@@ -289,9 +299,12 @@ int main(int argc, char* argv[]){
             else{
                 MPI_Gatherv(b_loc,aLength_loc-pruneAmount_l,agent_type,NULL,NULL,NULL,agent_type,0,MPI_COMM_WORLD);
             }
+            MPI_Barrier(MPI_COMM_WORLD);
+
 		    //******** END PRUNING ON THREADS********//
             delete[] b_loc;
         }
+
         // serial prune when serial prune is activated by high percentage of 0 velocities
         if(my_rank == 0) {
             if (serialPrune != 0) {
@@ -312,6 +325,7 @@ int main(int argc, char* argv[]){
             }
         }
 
+        MPI_Barrier(MPI_COMM_WORLD);
         if(my_rank == 0) {
             printf("Percentage of negative velocities %f\n",b[0].percentage);
             if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
@@ -319,7 +333,8 @@ int main(int argc, char* argv[]){
             }
         }
 		//******** END PRUNING ********//
-		
+
+
 		if(my_rank == 0) {
             // Count how mant were pruned
                 // This takes just as long as pruning O(n) (minus the computation piece per n)
@@ -338,15 +353,19 @@ int main(int argc, char* argv[]){
 
 
 
+
+
         //**********START STEP ALL***********//
         // make small agents of size bLength/comm_sz and then have extra for the last one
         bLength_loc = floor(bLength/comm_sz);
         int extraBLength = bLength - bLength_loc*comm_sz;
+        aLength = bLength*numberOfDirectionSpawn;
         if(my_rank == comm_sz-1){
             bLength_loc += extraBLength;
         }
+
         // after declaring blength for all ranks
-        int alength_loc = bLength_loc*numberOfDirectionSpawn;
+        aLength_loc = bLength_loc*numberOfDirectionSpawn;
 
         // convert agent to struct for scatter with MPI
         struct agent_type* b_loc;
@@ -364,45 +383,48 @@ int main(int argc, char* argv[]){
                 displacements[x] = x*bLength_loc;
             }
             counts[comm_sz-1] += extraBLength;
+
             MPI_Scatterv(b_struct,counts,displacements,agent_type,b_loc,bLength_loc,agent_type,0,MPI_COMM_WORLD);
         }
-        MPI_Scatterv(NULL,NULL,NULL,agent_type,b_loc,bLength_loc,agent_type,0,MPI_COMM_WORLD);
-
+        else{
+            MPI_Scatterv(NULL,NULL,NULL,agent_type,b_loc,bLength_loc,agent_type,0,MPI_COMM_WORLD);
+        }
         // convert b_loc from struct to agent
         class Agent* b_agent_loc = new class Agent[bLength_loc];
-        for(int x = 0;x<aLength_loc;x++){
+        for(int x = 0;x<bLength_loc;x++){
                 b_agent_loc[x] = StructToAgent(b_loc[x]);
         }
         // make agent a local for output
         class Agent* a_agent_loc;                                           // agent a_loc
-        a_agent_loc = new class Agent[alength_loc];
+        a_agent_loc = new class Agent[aLength_loc];
         delete[] b_loc;
 
         //Perform the step all in parallell, different for impilimentation
         utility->StepAll(b_agent_loc,bLength_loc,a_agent_loc,aLength_loc,properties,map);
-		
+
         struct agent_type* a_loc = new struct agent_type[aLength_loc];
         // convert the agent a_loc to struct for gathering with MPI
         for(int x = 0;x<aLength_loc;x++){
                 a_loc[x] = AgentToStruct(a_agent_loc[x]);
         }
         delete[] a_agent_loc;
-
+        
         // gather the structure data from the pruning process
         if(my_rank == 0){
             struct agent_type* a_struct = new struct agent_type[aLength];
             int counts[comm_sz];
             int displacements[comm_sz];
             for(int x = 0;x<comm_sz;x++){
-                counts[x] = aLength;
-                displacements[x] = x*aLength;
+                counts[x] = aLength_loc;
+                displacements[x] = x*aLength_loc;
             }
+            
             counts[comm_sz-1] += extraBLength*numberOfDirectionSpawn;
 
             MPI_Gatherv(a_loc,aLength_loc,agent_type,a_struct,counts,displacements,agent_type,0,MPI_COMM_WORLD);
 
             a = new class Agent[aLength];
-            // convert b from struct to agent
+            // convert a from struct to agent
             for(int x = 0;x<aLength;x++){
                 a[x] = StructToAgent(a_struct[x]);
             }
@@ -411,8 +433,24 @@ int main(int argc, char* argv[]){
         else{
             MPI_Gatherv(a_loc,aLength_loc,agent_type,NULL,NULL,NULL,agent_type,0,MPI_COMM_WORLD);
         }
+        
+        
         //******** END OF STEP ALL************
+
+        // MPI_Barrier(MPI_COMM_WORLD);
+
+        // if (my_rank==0){
+        //     for(int x = 0;x<aLength;x++){
+        //         printf("END STEP     In PositionX, %f, PositionY %f, Velocity %f, height %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height);
+        //     }
+        // }
+        // MPI_Barrier(MPI_COMM_WORLD);
+        // //
+
+
         loopAmount++;
+        // if (loopAmount == 2)
+        //     return 0;
 	}
     //if (my_rank == 0)
 	    //printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
