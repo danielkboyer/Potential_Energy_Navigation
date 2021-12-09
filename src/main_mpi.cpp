@@ -183,7 +183,7 @@ int main(int argc, char* argv[]){
     int extraALength=0;
     int extraAmountToPrune=0;
     int aLength_loc = 0;
-    
+
 	MPI_Barrier(MPI_COMM_WORLD);
     while(aLength > 0){
 		//Start Loop
@@ -340,8 +340,10 @@ int main(int argc, char* argv[]){
                 }
             }
         }
-
         MPI_Barrier(MPI_COMM_WORLD);
+        if (serialPrune != 0) {
+            MPI_Bcast(&bLength,1,MPI_INT,0,MPI_COMM_WORLD);
+        }
         if(my_rank == 0) {
             printf("Percentage of negative velocities %f\n",b[0].percentage);
             if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
@@ -372,6 +374,7 @@ int main(int argc, char* argv[]){
 
 
         //**********START STEP ALL***********//
+        MPI_Barrier(MPI_COMM_WORLD);
         start_step = MPI_Wtime();
 
         // make small agents of size bLength/comm_sz and then have extra for the last one
