@@ -35,6 +35,55 @@ void Agent_mpi_type(float direction_p, float positionX_p, float positionY_p, flo
 
 void Usage(char* prog_name);
 
+struct agent_type
+{
+    float direction;
+        float positionX;
+        float positionY;
+        float height;
+        float velocity;
+        float percentage;
+        //in seconds
+        float time;
+        int Id;
+        int parentId;
+        int pruned;
+};
+
+
+agent_type AgentToStruct(Agent agent){
+    agent_type copy;
+    copy.direction = agent.direction;
+    copy.positionX = agent.positionX;
+    copy.positionY = agent.positionY;
+    copy.height = agent.height;
+    copy.velocity = agent.velocity;
+    copy.percentage = agent.percentage;
+    copy.time = agent.time;
+    copy.Id = agent.Id;
+    copy.parentId = agent.parentId;
+    copy.pruned = true;
+    if(agent.pruned == 0)
+        copy.pruned = false;
+    return copy;
+}
+
+Agent StructToAgent(agent_type agent){
+    Agent copy;
+    copy.direction = agent.direction;
+    copy.positionX = agent.positionX;
+    copy.positionY = agent.positionY;
+    copy.height = agent.height;
+    copy.velocity = agent.velocity;
+    copy.percentage = agent.percentage;
+    copy.time = agent.time;
+    copy.Id = agent.Id;
+    copy.parentId = agent.parentId;
+    copy.pruned = true;
+    if(agent == 0)
+        copy.pruned = false;
+    return copy;
+}
 int main(int argc, char* argv[]){
 
 	if(argc != 12)
@@ -64,6 +113,42 @@ int main(int argc, char* argv[]){
     /* Find out how many processes are being used */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 
+    //***** INitialize Typees ******//
+    MPI_Datatype agent_type;
+
+    int lengths[10] = {1,1,1,1,1,1,1,1,1,1};
+
+    MPI_Aint displacements[10];
+    struct agent_type dummy_agent;
+    MPI_Aint base_address;
+    MPI_Get_address(&dummy_agent, &base_address);
+    MPI_Get_address(&dummy_agent.direction, &displacements[0]);
+    MPI_Get_address(&dummy_agent.positionX, &displacements[1]);
+    MPI_Get_address(&dummy_agent.positionY, &displacements[2]);
+    MPI_Get_address(&dummy_agent.height, &displacements[3]);
+    MPI_Get_address(&dummy_agent.velocity, &displacements[4]);
+    MPI_Get_address(&dummy_agent.percentage, &displacements[5]);
+    MPI_Get_address(&dummy_agent.time, &displacements[6]);
+    MPI_Get_address(&dummy_agent.Id, &displacements[7]);
+    MPI_Get_address(&dummy_agent.parentId, &displacements[8]);
+    MPI_Get_address(&dummy_agent.pruned, &displacements[9]);
+
+    displacements[0] = MPI_Aint_diff(displacements[0], base_address);
+    displacements[1] = MPI_Aint_diff(displacements[1], base_address);
+    displacements[2] = MPI_Aint_diff(displacements[2], base_address);
+    displacements[3] = MPI_Aint_diff(displacements[3], base_address);
+    displacements[4] = MPI_Aint_diff(displacements[4], base_address);
+    displacements[5] = MPI_Aint_diff(displacements[5], base_address);
+    displacements[6] = MPI_Aint_diff(displacements[6], base_address);
+    displacements[7] = MPI_Aint_diff(displacements[7], base_address);
+    displacements[8] = MPI_Aint_diff(displacements[8], base_address);
+    displacements[9] = MPI_Aint_diff(displacements[9], base_address);
+ 
+    MPI_Datatype types[10] = { MPI_FLOAT, MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_INT,MPI_INT,MPI_FLOAT, MPI_INT };
+    MPI_Type_create_struct(10, lengths, displacements, types, &agent_type);
+    MPI_Type_commit(&agent_type);
+
+
 	printf("Initializing Map\n");
 	//Initialize map
 	Map map = *new Map();
@@ -89,8 +174,7 @@ int main(int argc, char* argv[]){
         printf("Starting height: %f\n",startingHeight);
 
         for(int x = 0;x<startingCount;x++){
-            Agent y = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
-            a[x] = Agent_mpi_type(y.direction, y.positionX, y.positionY, y.height, y.velocity, y.time, y.Id, y.parentId,y.percentage,y.pruned,&Agent_mpi_t_p);
+            a[x] = Agent(currentDirection,startingX*map.GetPointDistance(),startingY*map.GetPointDistance(),startingHeight,startVelocity,0,x,-1,0,false);
             currentDirection+= radiusInterval;
         }
     }
@@ -108,7 +192,7 @@ int main(int argc, char* argv[]){
 		//Start Loop
         
         // broadcast this variable out at the start of each loop from rank 0
-		MPI_Bcast(serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);
+		MPI_Bcast(*serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);
 
         // make local variables 
         if(my_rank == 0) {
@@ -116,6 +200,7 @@ int main(int argc, char* argv[]){
             long amountToPrune;
             int bLength;
             Agent* b;
+            agent_type* b_struct;
         }
 
         //******** PRUNING ON THREADS********//
@@ -123,6 +208,7 @@ int main(int argc, char* argv[]){
         int bLength_loc = 0;
         int extraALength;
         int extraAmountToPrune;
+        int aLength_loc = 0;
         Agent* b_loc;
         if (my_rank == 0) {
             if(serialPrune == 0) {
@@ -139,30 +225,85 @@ int main(int argc, char* argv[]){
                 bLength_loc = aLength_loc - amountToPrune_loc;
                 printf("bLength_loc = %i ", bLength_loc);
             }
-
         }
-        // send things to all ranks and then prune
-        MPI_Bcast(aLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
-        MPI_Bcast(amountToPrune_loc,1,MPI_INT,0,MPI_COMM_WORLD);
-        MPI_Bcast(extraAmountToPrune,1,MPI_INT,0,MPI_COMM_WORLD);
-        MPI_Bcast(extraALength,1,MPI_INT,0,MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(bLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
-        b = new Agent[bLength];
-
-		//******** END PRUNING ON THREADS********//
-
-
-        utility->Prune(a_loc, b_loc, aLength_loc, long(amountToPrune_loc));
-        
-        // combine all the  back to rank 0 (a, b)
-        if(my_rank == 0) {
-            printf("Percentage of negative velocities %f\n",b[0].percentage);
-            if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
-                serialPrune = 1;
+        // send things to all ranks and then prune as long as we are not doing the serial prune
+        if(serialPrune == 0) {
+            MPI_Bcast(aLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
+            MPI_Bcast(amountToPrune_loc,1,MPI_INT,0,MPI_COMM_WORLD);
+            MPI_Bcast(extraAmountToPrune,1,MPI_INT,0,MPI_COMM_WORLD);
+            MPI_Bcast(extraALength,1,MPI_INT,0,MPI_COMM_WORLD);
+            MPI_Bcast(bLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
+            int pruneAmount_l = amountToPrune_loc;
+            if(my_rank == comm_sz-1){
+                pruneAmount_l = amountToPrune_loc + extraAmountToPrune;
+                aLength_loc += extraALength
             }
-        }
 
+            // convert agent to struct for scatter with MPI and scatter
+            a_loc = new agent_type[alength_loc];
+            b_agent_loc = new Agent[aLength_loc - pruneAmount_l];
+            if(my_rank == 0){
+                agent_type* a_struct = new agent_type[aLength];
+
+                for(int x = 0;x<aLength;x++){
+                    a_struct[x] = AgentToStruct(a[x]);
+                }
+                delete[] a;
+                int[comm_sz] counts;
+                int[comm_sz] displacements;
+                for(int x = 0;x<comm_sz;x++){
+                    counts[x] = amountToPrune_loc;
+                    displacements[x] = x*amountToPrune_loc;
+                }
+                counts[comm_sz-1] += extraAmountToPrune;
+                MPI_Scatterv(a_struct,counts,displacements,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
+            }
+
+            MPI_Scatterv(NULL,NULL,NULL,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
+
+            // convert a_loc from struct to agent for the pruning process          
+            Agent* a_agent_loc = new Agent[alength_loc];
+            for(int x = 0;x<alength_loc;x++){
+                    a_agent_loc[x] = StructToAgent(a_loc[x]);
+            }
+            delete[] a_loc;
+            // Do the actual pruning on each thread on the chunk they have been given
+            utility->Prune(a_agent_loc, b_agent_loc, aLength_loc, long(pruneAmount_l));
+            
+            agent_type* b_loc = new agent_type[aLength_loc - pruneAmount_l];
+            // convert the agent b_loc to struct for gathering with MPI
+            for(int x = 0;x<aLength_loc - pruneAmount_l;x++){
+                    b_loc[x] = AgentToStruct(b_agent_loc[x]);
+            }
+            delete[] b_agent_loc;
+
+            // gather the structure data from the pruning process
+            if(my_rank == 0){
+                b_struct = new agent_type[bLength];
+                int[comm_sz] counts;
+                int[comm_sz] displacements;
+                for(int x = 0;x<comm_sz;x++){
+                    counts[x] = amountToPrune_loc;
+                    displacements[x] = x*amountToPrune_loc;
+                }
+                counts[comm_sz-1] += extraAmountToPrune;
+
+                MPI_Gatherv(b_loc,aLength_loc-pruneAmount_l,agent_type,b_struct,counts,displacements,agent_type,0,MPI_COMM_WORLD);
+
+                b = new Agent[bLength];
+                // convert b from struct to agent
+                for(int x = 0;x<bLength;x++){
+                        b[x] = StructToAgent(b_struct[x]);
+                }
+                delete[] b_struct;
+            }
+            else{
+                MPI_Gatherv(b_loc,aLength_loc-pruneAmount_l,agent_type,NULL,NULL,NULL,agent_type,0,MPI_COMM_WORLD);
+            }
+		    //******** END PRUNING ON THREADS********//
+        }
+        // serial prune when serial prune is activated by high percentage of 0 velocities
         if(my_rank == 0) {
             if (serialPrune != 0) {
                 vector<int> good;
@@ -181,6 +322,13 @@ int main(int argc, char* argv[]){
                 }
             }
         }
+
+        if(my_rank == 0) {
+            printf("Percentage of negative velocities %f\n",b[0].percentage);
+            if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
+                serialPrune = 1;
+            }
+        }
 		//******** END PRUNING ********//
 		
 		if(my_rank == 0) {
@@ -195,16 +343,19 @@ int main(int argc, char* argv[]){
                     maxDY = b[x].positionY;
                 }
             }
-            
             printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
-            //Write to file here, this is probbaly the same for each implimentation
-            startAgentId += bLength;
-
-            delete[] a;
+        
             aLength = bLength*numberOfDirectionSpawn; 
-            a = new Agent[aLength]; // spawn all new agents
+            a = new Agent[aLength]; // spawn all new agents on rank 0 
         }
         
+        // make small agents
+
+        //create struct of new agent
+        // send out the structs
+
+        // convert structs to agents for the stepAll function
+
         //Perform the step all in parallell, different for impilimentation
         utility->StepAll(b_loc,bLength_loc,a,aLength_loc,properties,map);
 		
@@ -227,61 +378,3 @@ void Usage(char* prog_name){
 	fprintf(stderr, "usage: %s <file_name> <starting_count> <starting_x> <starting_y> <direction_spawn_radius> <number_of_direction_spawn> <travel_distance> <start_velocity> <max_agent_count> <friction> <run_type>\n",prog_name);
 	exit(0);
 }
-
-
-
-/*------------------------------------------------------------------
- * Function:     Build_mpi_type
- * Purpose:      Build a derived datatype so that the three
- *               input values can be sent in a single message.
- * Input args:   a_p:  pointer to left endpoint
- *               b_p:  pointer to right endpoint
- *               n_p:  pointer to number of trapezoids
- * Output args:  input_mpi_t_p:  the new MPI datatype
- */
-void Agent_mpi_type(float* direction_p, 
-                    float* positionX_p, 
-                    float* positionY_p, 
-                    float* height_p, 
-                    float* velocity_p, 
-                    float* time_p, 
-                    int* Id_p, 
-                    int* parentId_p,
-                    float* percentage_p,
-                    bool* pruned_p,
-                    MPI_Datatype* Agent_mpi_t_p /* out */); {
-
-    int array_of_blocklengths[10] = {1, 1, 1,1,1,1,1,1,1,1,1};
-    MPI_Datatype array_of_types[10] = {MPI_FLOAT, MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_FLOAT,MPI_INT,MPI_INT,MPI_FLOAT, MPI_CXX_BOOL};
-    MPI_Aint direction_addr, positionX_addr, positionY_addr, height_addr, velocity_addr, time_addr, Id_addr, parentId_addr, percentage_addr, pruned_addr;
-    MPI_Aint array_of_displacements[10] = {0};
-
-    MPI_Get_address(direction_p, &direction_addr);
-    MPI_Get_address(positionX_p, &positionX_addr);
-    MPI_Get_address(positionY_p, &positionY_addr);
-    MPI_Get_address(height_p, &height_addr);
-    MPI_Get_address(velocity_p, &velocity_addr);
-    MPI_Get_address(time_p, &time_addr);
-    MPI_Get_address(Id_p, &Id_addr);
-    MPI_Get_address(parentId_p, &parentId_addr);
-    MPI_Get_address(percentage_p, &percentage_addr);
-    MPI_Get_address(pruned_p, &pruned_addr);
-
-    array_of_displacements[1] = positionX_addr-direction_addr;
-    array_of_displacements[2] = positionY_addr-direction_addr;
-    array_of_displacements[3] = height_addr-direction_addr;
-    array_of_displacements[4] = velocity_addr-direction_addr;
-    array_of_displacements[5] = time_addr-direction_addr;
-    array_of_displacements[6] = Id_addr-direction_addr;
-    array_of_displacements[7] = parentId_addr-direction_addr;
-    array_of_displacements[8] = percentage_addr-direction_addr;
-    array_of_displacements[9] = pruned_addr-direction_addr;
-
-    MPI_Type_create_struct(10, array_of_blocklengths,
-        array_of_displacements, array_of_types,
-        Agent_mpi_t_p);
-    MPI_Type_commit(Agent_mpi_t_p);
-    }  /* Agent_mpi_t_p */
-
-
-
