@@ -48,11 +48,14 @@ int main(int argc, char* argv[]){
 
 	//********** END Collect arguments **********
 	unsigned long long start_total_time = rdtsc();
+	unsigned long long elapsed_total_time=0;
+
     unsigned long long start_stepping_time;
     unsigned long long end_stepping_time;
+
 	unsigned long long elapsed_stepping_time=0;
-	unsigned long long elapsed_total_time=0;
 	
+	unsigned long long total_prune_time = 0;
 
 	
 	printf("Initializing FileWriter\n");
@@ -114,6 +117,7 @@ int main(int argc, char* argv[]){
 		long amountToPrune;
 		int bLength;
 		Agent* b;
+		unsigned long long prune_start = rdtsc();
 		if(serialPrune == false)
 		{
 			amountToPrune = max(aLength - maxAgentCount,(long)0);
@@ -147,6 +151,7 @@ int main(int argc, char* argv[]){
 			}
 
 		}
+		total_prune_time += rdtsc() - prune_start;
 		//******** END PRUNING ********//
 		
 		// maybe only do this once at the end of the function? 
@@ -182,7 +187,7 @@ int main(int argc, char* argv[]){
 	elapsed_total_time = end_total_time-start_total_time;
 	printf("Total time  %lld\n", elapsed_total_time);
 	printf("Stepping time  %lld\n", elapsed_stepping_time);
-
+	printf("Prune time is %lld\n",total_prune_time) ;
 	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
 }
