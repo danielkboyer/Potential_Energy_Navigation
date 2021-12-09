@@ -47,11 +47,14 @@ int main(int argc, char* argv[]){
 		threadCount = stoi(argv[12]);
 
 	//********** END Collect arguments **********
-	unsigned long long start_total_time;
-    unsigned long long start_application_time;
-    unsigned long long start_local_histogram_time;
-    unsigned long long end_local_histogram_time;
+	unsigned long long start_total_time = rdtsc();
+    unsigned long long start_stepping_time;
+    unsigned long long end_stepping_time;
+	unsigned long long elapsed_stepping_time=0;
+	unsigned long long elapsed_total_time=0;
+	
 
+	
 	printf("Initializing FileWriter\n");
 	//Initialize file_Writer
 	FileWriter fileWriter = *new FileWriter();
@@ -114,12 +117,12 @@ int main(int argc, char* argv[]){
 		if(serialPrune == false)
 		{
 			amountToPrune = max(aLength - maxAgentCount,(long)0);
-			printf("Amount to prune: %ld\n",amountToPrune);
+			//printf("Amount to prune: %ld\n",amountToPrune);
 			bLength = aLength - amountToPrune;
 			b = new Agent[bLength];
 			utility->Prune(a,b, aLength, long(amountToPrune));
 			
-			printf("Percentage of negative velocities %f\n",b[0].percentage);
+			//printf("Percentage of negative velocities %f\n",b[0].percentage);
 			if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
 				serialPrune = true;
 			}
@@ -158,7 +161,7 @@ int main(int argc, char* argv[]){
 				maxDY = b[x].positionY;
 			}
 		}
-		printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
+		//printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 		//Write to file here, this is probbaly the same for each implimentation
 		fileWriter.Write(b,startAgentId);
 		startAgentId += bLength;
@@ -167,12 +170,19 @@ int main(int argc, char* argv[]){
 		aLength = bLength*numberOfDirectionSpawn; 
 		a = new Agent[aLength]; // spawn all new agents
 
+		start_stepping_time = rdtsc();
 		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
-		return 0;
+		end_stepping_time= rdtsc();
+		elapsed_stepping_time+=end_stepping_time-start_stepping_time;
 		delete[] b;
 		loopAmount++;
 	}
+	unsigned long long end_total_time = rdtsc();
+	elapsed_total_time = end_total_time-start_total_time;
+	printf("Total time  %lld\n", elapsed_total_time);
+	printf("Stepping time  %lld\n", elapsed_stepping_time);
+
 	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
 }
