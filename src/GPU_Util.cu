@@ -172,10 +172,13 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
     Properties* properties_d;
     Map* map_d;
 
+
     printf("PROPERTIES : NUMBER %f\n",properties.numberOfDirectionSpawn);
 
 
+    Point* pointer;
 
+    cudaMalloc((void **)&pointer->points,sizeof(Point *));
     ///POINTS MEMORY
     cudaMalloc((void **)&map_d,sizeof(Map));
     cudaMemcpy(map_d,&map,sizeof(Map),cudaMemcpyHostToDevice);
