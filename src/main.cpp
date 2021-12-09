@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
     unsigned long long start_application_time;
     unsigned long long start_local_histogram_time;
     unsigned long long end_local_histogram_time;
-	
+
 	printf("Initializing FileWriter\n");
 	//Initialize file_Writer
 	FileWriter fileWriter = *new FileWriter();
@@ -106,7 +106,6 @@ int main(int argc, char* argv[]){
 	while(aLength > 0){
 		//Start Loop
 		printf("\nALength: %ld\nLoop Number:%d\n",aLength,loopAmount);
-		
 
 		//******** PRUNING ********//
 		long amountToPrune;

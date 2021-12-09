@@ -12,91 +12,6 @@
 using namespace std;
 
 
-__host__ __device__ Map::Map(){
-
-}
-
-__host__ __device__ float Map::GetPointDistance(){
-    return _pointDistance;
-}
-__host__ __device__ float Map::GetHeight(int x, int y){
-    return *(new float(points[y*_width+x].height));
-}
-//takes a float x and y and returns the points surrounding that point
-//the returned points are clockwise, dL, uL, uR, dR
-//returns if any of the points or OOB
-__host__ __device__ float Map::GetHeight(float x, float y){
-    int startX = floor(x/_pointDistance);
-    int startY = floor(y/_pointDistance);
-    //printf("StartX: %d , StartY: %d\n",startX,startY);
-    if(startX < 0)
-        return NAN;
-    if(startX +1 >= _width)
-        return NAN;
-    if(startY -1 < 0)
-        return NAN;
-    if(startY >= _height)
-        return NAN;
-    //printf("x %f, y %f\n",x/_pointDistance,y/_pointDistance);
-    float xPoint = x/_pointDistance - startX;
-    float yPoint = y/_pointDistance - startY;
-    //printf("yPoint %f, xPoint %f\n",yPoint,xPoint);
-    return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(points[startY*_width+startX].height) + 
-            (_pointDistance)*(_pointDistance - yPoint)*(points[startY*_width+startX+1].height) +
-            (_pointDistance - xPoint)*(_pointDistance)*(points[(startY-1)*_width+startX].height) +
-            (_pointDistance)*(_pointDistance)*(points[(startY-1)*_width+startX+1].height);
-
-    
-}
-//takes a file name and reads the map into memory
-//must be in order of
-//(Pont Distance)1.3
-//(width)1000
-//(height)1000
-//(z values)10
-//9
-//....
-
-__host__ void Map::ReadFile(string fileName){
-
-    std::ifstream file(fileName);
-    if (file.is_open()) {
-        std::string line;
-
-        std::getline(file,line);
-        _pointDistance = stof(line);
-        printf("Point Distance %f\n",_pointDistance);
-        //Get width first
-        std::getline(file, line);
-        _width = stoi(line);
-        printf("Map Width %d\n",_width);
-        //Get height next
-        std::getline(file, line);
-        _height = stoi(line);
-        points = new Point[_height * _width];
-        printf("Map height %d\n",_height);
-        printf("Point Size %i\n",sizeof(Point));
-        //because y will be incremented right away in the loop
-        int currentIndex = 0;
-        while (std::getline(file, line)) {
-            
-            float z = stof(line);
-            //printf("Creating point at (%d,%d)",currentIndex%_width,currentIndex/_height);
-            points[currentIndex] = Point(currentIndex%_width,currentIndex/_height,z);
-            
-            currentIndex++;
-    }
-    file.close();
-}
-else{
-    printf("Could not find file %s\n",fileName);
-}
-    
-}
-__host__ __device__ Point::Point(){};
-__host__ __device__ Point::Point(int x, int y, float height):x(x),y(y),height(height){
-
-}
 
 __host__ __device__ Agent::Agent(){}
 __host__ __device__ Agent::Agent(Agent& agent){
@@ -152,7 +67,7 @@ void ShuffleGPU(Agent* agents, int count){
 
 }
 
-__global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int apt, Properties* properties, Map* map,Point* points){
+__global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int apt, Properties* properties, Map* map){
 
     int x = blockDim.x;
 
@@ -208,7 +123,7 @@ __global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int a
             //printf("Map Pointe distance %f\n",map->_pointDistance);
             //printf("Map Pointe %f\n",points[0].height);
             for(int t = 0;t<map->_width;t++){
-                printf("GPU Map: %f\n",points[t].height);
+                printf("GPU Map: %f\n",map->points[t].height);
             }
             // outAgent.height = (map->_pointDistance - xPoint)*(map->_pointDistance - yPoint)*(points[startY][startX].height) + 
             //         (map->_pointDistance)*(map->_pointDistance - yPoint)*(points[startY][startX+1].height) +
@@ -247,10 +162,6 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
     //10
     //10
     //10
-    for(int x = 0;x<inCount;x++){
-        printf("In PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",in[x].positionX,in[x].positionY,in[x].velocity,in[x].height,properties.gravity,properties.friction);
-    
-    }
     int atp = 50;
     int gridNumber = (int)ceil(sqrt(((float)inCount/(float)atp))/(float)512);
     dim3 DimGrid(gridNumber,gridNumber,1);
@@ -260,28 +171,39 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
     Agent* out_d;
     Properties* properties_d;
     Map* map_d;
-    Point* points_d;
-    Point* points_h = map.points;
+
     printf("PROPERTIES : NUMBER %f\n",properties.numberOfDirectionSpawn);
+
+
+
+    ///POINTS MEMORY
+    cudaMalloc((void **)&map_d,sizeof(Map));
+    cudaMemcpy(map_d,&map,sizeof(Map),cudaMemcpyHostToDevice);
+
+    Point *temp_data;
+    cudaMalloc((void **)&(temp_data),sizeof(Point)*map._width*map._height);
+    cudaMemcpy(&(map_d->points),&(temp_data),sizeof(Point)*map._width*map._height,cudaMemcpyHostToDevice);
+
+    cudaMemcpy(temp_data,map.points,sizeof(Point)*map._width*map._height,cudaMemcpyHostToDevice);
+    
+
+    //End Point Memory
     cudaMalloc((void **)&properties_d,sizeof(Properties));
-    //cudaMalloc((void **)&map_d,sizeof(Map));
-    int length = sizeof(Point);
-    printf("Please be it %i\n",length);
-    cudaMalloc((void **)&points_d,(sizeof(Point) *map._width *map._height+ map._height));
+
     cudaMalloc((void **)&out_d,outCount*sizeof(Agent));
     cudaMalloc((void **)&in_d,inCount*sizeof(Agent));
     for(int x = 0;x<map._width*map._height;x++){
         //printf("Map at %i,%f\n",x,points_h[x].height);
     }
     printf("Values %i,%i,%i\n",map._width,map._height,map._width*map._height);
-    cudaMemcpy(points_d,&points_h,(sizeof(Point) *map._width *map._height ),cudaMemcpyHostToDevice);
-    //cudaMemcpy(map_d,&map,sizeof(Map),cudaMemcpyHostToDevice);
+    
+    
     printf("Got Here\n");
     cudaMemcpy(properties_d,&properties,sizeof(Properties),cudaMemcpyHostToDevice);
     printf("Got Here\n");
     cudaMemcpy(in_d,in,inCount*sizeof(Agent),cudaMemcpyHostToDevice);
     printf("Got Here\n");
-    GPU_Step<<<DimGrid,DimBlock>>>(in_d,inCount,out_d,outCount,atp,properties_d,map_d,points_d);
+    GPU_Step<<<DimGrid,DimBlock>>>(in_d,inCount,out_d,outCount,atp,properties_d,map_d);
     cudaDeviceSynchronize();
     cudaMemcpy(out,out_d,outCount*sizeof(Agent),cudaMemcpyDeviceToHost);
     

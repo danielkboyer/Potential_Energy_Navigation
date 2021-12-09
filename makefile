@@ -45,20 +45,14 @@ $(OUT)/run_me : $(ODIR)/$(MAINFILE).o $(ODIR)/Point.o $(ODIR)/Map.o $(ODIR)/Prop
 
 $(ODIR)/$(MAINFILE).o : $(SDIR)/$(MAINFILE).cpp $(SDIR)/Agent.h $(SDIR)/Util.h $(SDIR)/FileWriter.h $(SDIR)/Serial_Util.h $(SDIR)/GPU_Util.h
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/$(MAINFILE).cpp 
-ifeq ($(GPU),true)
-$(ODIR)/Point.o : $(SDIR)/Point.cu
-	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Point.cu
-else
+
 $(ODIR)/Point.o : $(SDIR)/Point.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Point.cpp
-endif
-ifeq ($(GPU),true)
-$(ODIR)/Map.o : $(SDIR)/Map.cu $(SDIR)/Point.h
-	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Map.cu
-else
+
+
 $(ODIR)/Map.o : $(SDIR)/Map.cpp $(SDIR)/Point.h
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Map.cpp
-endif
+
 $(ODIR)/Properties.o : $(SDIR)/Properties.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Properties.cpp
 $(ODIR)/Util.o : $(SDIR)/Util.cpp
