@@ -14,7 +14,7 @@ float Map::GetPointDistance(){
     return _pointDistance;
 }
 float Map::GetHeight(int x, int y){
-    return *(new float(points[y][x].height));
+    return *(new float(points[y*_width+x].height));
 }
 //takes a float x and y and returns the points surrounding that point
 //the returned points are clockwise, dL, uL, uR, dR
@@ -35,10 +35,10 @@ float Map::GetHeight(float x, float y){
     float xPoint = x/_pointDistance - startX;
     float yPoint = y/_pointDistance - startY;
     //printf("yPoint %f, xPoint %f\n",yPoint,xPoint);
-    return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(points[startY][startX].height) + 
-            (_pointDistance)*(_pointDistance - yPoint)*(points[startY][startX+1].height) +
-            (_pointDistance - xPoint)*(_pointDistance)*(points[startY-1][startX].height) +
-            (_pointDistance)*(_pointDistance)*(points[startY-1][startX+1].height);
+    return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(points[startY*_width+startX].height) + 
+            (_pointDistance)*(_pointDistance - yPoint)*(points[startY*_width+startX+1].height) +
+            (_pointDistance - xPoint)*(_pointDistance)*(points[(startY-1)*_width+startX].height) +
+            (_pointDistance)*(_pointDistance)*(points[(startY-1)*_width+startX+1].height);
 
     
 }
@@ -66,24 +66,18 @@ void Map::ReadFile(string fileName){
         //Get height next
         std::getline(file, line);
         _height = stoi(line);
-        points = new Point*[_height];
+        points = new Point[_height * _width];
         printf("Map height %d\n",_height);
-        int currentX = 0;
+        
         //because y will be incremented right away in the loop
-        int currentY = -1;
+        int currentIndex = 0;
         while (std::getline(file, line)) {
-            if(currentX%_width == 0){
-                currentX = 0;
-                currentY++;
-
-            points[currentY] = new Point[_width];
-
-            }
-            float z = stof(line);
-            //printf("Creating point at (%d,%d)",currentX,currentY);
-            points[currentY][currentX] = Point(currentX,currentY,z);
             
-            currentX++;
+            float z = stof(line);
+            //printf("Creating point at (%d,%d)",currentIndex%_width,currentIndex/_height);
+            points[currentIndex] = Point(currentIndex%_width,currentIndex/_height,z);
+            
+            currentIndex++;
     }
     file.close();
 }

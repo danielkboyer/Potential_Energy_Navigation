@@ -12,7 +12,17 @@
 #include "GPU_Util.h"
 #include "vector"
 
-
+static inline uint64_t rdtsc() {
+    uint32_t lo, hi;
+    __asm__ __volatile__ (
+      "xorl %%eax, %%eax\n"
+      "cpuid\n"
+      "rdtsc\n"
+      : "=a" (lo), "=d" (hi)
+      :
+      : "%ebx", "%ecx");
+    return (uint64_t)hi << 32 | lo;
+}
 void Usage(char* prog_name);
 
 int main(int argc, char* argv[]){
@@ -37,7 +47,11 @@ int main(int argc, char* argv[]){
 		threadCount = stoi(argv[12]);
 
 	//********** END Collect arguments **********
-
+	unsigned long long start_total_time;
+    unsigned long long start_application_time;
+    unsigned long long start_local_histogram_time;
+    unsigned long long end_local_histogram_time;
+	
 	printf("Initializing FileWriter\n");
 	//Initialize file_Writer
 	FileWriter fileWriter = *new FileWriter();
