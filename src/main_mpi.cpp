@@ -62,13 +62,20 @@ Agent StructToAgent(agent_type agent){
 
 int main(int argc, char* argv[]){
     int my_rank, comm_sz;
+    double start_1, finish_1, loc_elapsed_1=0, elapsed_1;
+    double start_prune, finish_prune, loc_elapsed_prune=0, elapsed_prune;
+    double start_step, finish_step, loc_elapsed_step=0, elapsed_step;
+
     /* Let the system do what it needs to start up MPI */
     MPI_Init(NULL,NULL);
     /* Find out how many processes are being used */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     /* Get my process rank */
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
+    
+    // start total execution time
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_1 = MPI_Wtime();
 
 	if(argc != 12)
 		Usage(argv[0]);
@@ -85,10 +92,7 @@ int main(int argc, char* argv[]){
 	float friction = stof(argv[10]);
 	int runType = stoi(argv[11]);
 	//********** END Collect arguments **********
-    
-    double start_agent_comp, finish_agent_comp, loc_elapsed_agent_comp, agent_comp;
-    double start_2, finish_2, loc_elapsed_2, elapsed_2;
-    double start_3, finish_3, loc_elapsed_3, elapsed_3;
+
 
 
     
@@ -179,14 +183,19 @@ int main(int argc, char* argv[]){
     int extraALength=0;
     int extraAmountToPrune=0;
     int aLength_loc = 0;
+    
 	MPI_Barrier(MPI_COMM_WORLD);
     while(aLength > 0){
 		//Start Loop
         
         // broadcast this variable out at the start of each loop from rank 0
-        int* serialPrune_p = &serialPrune;
-		MPI_Bcast(serialPrune_p,1,MPI_INT,0,MPI_COMM_WORLD);
-
+        // int serialPrune_p;
+		// MPI_Bcast(&serialPrune_p,1,MPI_INT,0,MPI_COMM_WORLD);
+        
+        MPI_Bcast(&serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);
+        
+        MPI_Barrier(MPI_COMM_WORLD);
+        printf("serialPrune %i on rank %i \n", serialPrune, my_rank);
         // make local variables 
         long amountToPrune;
         int bLength;
@@ -197,19 +206,22 @@ int main(int argc, char* argv[]){
         }
         amountToPrune = max(aLength - maxAgentCount,(long)0);
         bLength = aLength - amountToPrune;
+        
+        start_prune = MPI_Wtime();
+
         //******** PRUNING ON THREADS********//
         if (my_rank == 0) {
             if(serialPrune == 0) {
                 printf("Amount to prune: %ld\n",amountToPrune);
                 // make variables for local computations
                 aLength_loc = floor(aLength/comm_sz);
-                printf("aLength_loc = %i \n", aLength_loc);
+                //printf("aLength_loc = %i \n", aLength_loc);
                 amountToPrune_loc = floor(amountToPrune/comm_sz);
-                printf("amountToPrune_loc = %i \n", amountToPrune_loc);
+                //printf("amountToPrune_loc = %i \n", amountToPrune_loc);
                 extraAmountToPrune = amountToPrune - comm_sz*amountToPrune_loc;
                 extraALength = aLength - comm_sz*aLength_loc;
                 bLength_loc = aLength_loc - amountToPrune_loc;
-                printf("bLength_loc = %i ", bLength_loc);
+                //printf("bLength_loc = %i ", bLength_loc);
             }
         }
 
@@ -266,9 +278,9 @@ int main(int argc, char* argv[]){
             // Do the actual pruning on each thread on the chunk they have been given
             utility->Prune(a_agent_loc, b_agent_loc, aLength_loc, long(pruneAmount_l));
 
-            MPI_Barrier(MPI_COMM_WORLD);
-            printf("my rank %i,aLength_loc %i, pruneAmount_l %i,  \n",my_rank,aLength_loc,pruneAmount_l);
-            MPI_Barrier(MPI_COMM_WORLD);
+            // MPI_Barrier(MPI_COMM_WORLD);
+            // printf("my rank %i,aLength_loc %i, pruneAmount_l %i,  \n",my_rank,aLength_loc,pruneAmount_l);
+            // MPI_Barrier(MPI_COMM_WORLD);
 
             struct agent_type* b_loc = new struct agent_type[aLength_loc - pruneAmount_l];
             // convert the agent b_loc to struct for gathering with MPI
@@ -304,10 +316,14 @@ int main(int argc, char* argv[]){
 		    //******** END PRUNING ON THREADS********//
             delete[] b_loc;
         }
+        finish_prune = MPI_Wtime();
+        loc_elapsed_prune += finish_prune-start_prune;
+
 
         // serial prune when serial prune is activated by high percentage of 0 velocities
         if(my_rank == 0) {
             if (serialPrune != 0) {
+
                 vector<int> good;
                 for(int x = 0;x<aLength;x++){
                     if(a[x].pruned == false){
@@ -356,6 +372,8 @@ int main(int argc, char* argv[]){
 
 
         //**********START STEP ALL***********//
+        start_step = MPI_Wtime();
+
         // make small agents of size bLength/comm_sz and then have extra for the last one
         bLength_loc = floor(bLength/comm_sz);
         int extraBLength = bLength - bLength_loc*comm_sz;
@@ -433,7 +451,8 @@ int main(int argc, char* argv[]){
         else{
             MPI_Gatherv(a_loc,aLength_loc,agent_type,NULL,NULL,NULL,agent_type,0,MPI_COMM_WORLD);
         }
-        
+        finish_step = MPI_Wtime();
+        loc_elapsed_step += finish_step-start_step;
         
         //******** END OF STEP ALL************
 
@@ -444,20 +463,35 @@ int main(int argc, char* argv[]){
         //         printf("END STEP     In PositionX, %f, PositionY %f, Velocity %f, height %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height);
         //     }
         // }
-        // MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
         // //
 
 
         loopAmount++;
-        // if (loopAmount == 2)
-        //     return 0;
+
 	}
     //if (my_rank == 0)
 	    //printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
-    /* Shut down MPI */
+
     MPI_Barrier(MPI_COMM_WORLD);
+        // end all timings
+    finish_1 = MPI_Wtime();
+    loc_elapsed_1 = finish_1-start_1;
+    MPI_Reduce(&loc_elapsed_1, &elapsed_1, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&loc_elapsed_prune, &elapsed_prune, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&loc_elapsed_step, &elapsed_step, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    // print the timings
+    if (my_rank == 0)
+        printf("Elapsed total program time = %e\n", elapsed_1);
+    if (my_rank == 0)
+        printf("Elapsed prune time = %e\n", elapsed_prune);
+    if (my_rank == 0)
+        printf("Elapsed step comp time = %e\n", elapsed_step);
+    MPI_Barrier(MPI_COMM_WORLD);
+    /* Shut down MPI */
     MPI_Finalize();
-	return 0;
+	
+    return 0;
 }
 
 
