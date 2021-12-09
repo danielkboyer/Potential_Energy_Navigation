@@ -105,7 +105,7 @@ int main(int argc, char* argv[]){
 			bLength = aLength - amountToPrune;
 			b = new Agent[bLength];
 			utility->Prune(a,b, aLength, long(amountToPrune));
-
+			
 			printf("Percentage of negative velocities %f\n",b[0].percentage);
 			if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
 				serialPrune = true;
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]){
 
 		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
-		
+		return 0;
 		delete[] b;
 		loopAmount++;
 	}

@@ -10,6 +10,7 @@ GPUNAME = GPU_Util.cpp
 MAINFILE = main
 IS_MPI = false
 
+AGENT_TYPE = cpp
 ifeq ($(MPI),true)
 MAINFILE = main_mpi
 OUT = lib_mpi
@@ -20,10 +21,11 @@ IS_MPI = true
 CFLAGS = -g -DIS_MPI
 endif
 ifeq ($(GPU),true)
+AGENT_TYPE = cu
 CC = nvcc
 OUT = lib_gpu
 ODIR = obj_gpu
-CFLAGS = -g
+CFLAGS = -g -dc
 GPUNAME = GPU_Util.cu
 endif
 ifeq ($(OMP),true)
@@ -55,8 +57,8 @@ $(ODIR)/FileWriter.o : $(SDIR)/FileWriter.cpp $(SDIR)/Agent.h
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/FileWriter.cpp
 $(ODIR)/Serial_Util.o : $(SDIR)/Serial_Util.cpp $(SDIR)/Agent.h $(SDIR)/Map.h $(SDIR)/Properties.h $(SDIR)/Util.h $(SDIR)/Serial_Util.h
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Serial_Util.cpp
-$(ODIR)/Agent.o : $(SDIR)/Agent.cpp
-	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Agent.cpp
+$(ODIR)/Agent.o : $(SDIR)/Agent.$(AGENT_TYPE)
+	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/Agent.$(AGENT_TYPE)
 $(ODIR)/MPI_Util.o : $(SDIR)/MPI_Util.cpp
 	$(CC) -c $(CFLAGS) -o $@ $(SDIR)/MPI_Util.cpp
 $(ODIR)/GPU_Util.o : $(SDIR)/$(GPUNAME)

@@ -14,7 +14,7 @@ float Map::GetPointDistance(){
     return _pointDistance;
 }
 float Map::GetHeight(int x, int y){
-    return *(new float(_points[y][x].height));
+    return *(new float(points[y][x].height));
 }
 //takes a float x and y and returns the points surrounding that point
 //the returned points are clockwise, dL, uL, uR, dR
@@ -35,10 +35,10 @@ float Map::GetHeight(float x, float y){
     float xPoint = x/_pointDistance - startX;
     float yPoint = y/_pointDistance - startY;
     //printf("yPoint %f, xPoint %f\n",yPoint,xPoint);
-    return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(_points[startY][startX].height) + 
-            (_pointDistance)*(_pointDistance - yPoint)*(_points[startY][startX+1].height) +
-            (_pointDistance - xPoint)*(_pointDistance)*(_points[startY-1][startX].height) +
-            (_pointDistance)*(_pointDistance)*(_points[startY-1][startX+1].height);
+    return (_pointDistance - xPoint)*(_pointDistance - yPoint)*(points[startY][startX].height) + 
+            (_pointDistance)*(_pointDistance - yPoint)*(points[startY][startX+1].height) +
+            (_pointDistance - xPoint)*(_pointDistance)*(points[startY-1][startX].height) +
+            (_pointDistance)*(_pointDistance)*(points[startY-1][startX+1].height);
 
     
 }
@@ -66,7 +66,7 @@ void Map::ReadFile(string fileName){
         //Get height next
         std::getline(file, line);
         _height = stoi(line);
-        _points = new Point*[_height];
+        points = new Point*[_height];
         printf("Map height %d\n",_height);
         int currentX = 0;
         //because y will be incremented right away in the loop
@@ -76,12 +76,12 @@ void Map::ReadFile(string fileName){
                 currentX = 0;
                 currentY++;
 
-                _points[currentY] = new Point[_width];
+            points[currentY] = new Point[_width];
 
             }
             float z = stof(line);
             //printf("Creating point at (%d,%d)",currentX,currentY);
-            _points[currentY][currentX] = Point(currentX,currentY,z);
+            points[currentY][currentX] = Point(currentX,currentY,z);
             
             currentX++;
     }
