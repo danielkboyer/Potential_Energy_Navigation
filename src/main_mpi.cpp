@@ -183,22 +183,15 @@ int main(int argc, char* argv[]){
     int extraALength=0;
     int extraAmountToPrune=0;
     int aLength_loc = 0;
+    long amountToPrune;
+    int bLength;
 
-	MPI_Barrier(MPI_COMM_WORLD);
     while(aLength > 0){
-		//Start Loop
-        
+		//Start Loop 
         // broadcast this variable out at the start of each loop from rank 0
-        // int serialPrune_p;
-		// MPI_Bcast(&serialPrune_p,1,MPI_INT,0,MPI_COMM_WORLD);
-        
         MPI_Bcast(&serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);
         
-        MPI_Barrier(MPI_COMM_WORLD);
-        printf("serialPrune %i on rank %i \n", serialPrune, my_rank);
         // make local variables 
-        long amountToPrune;
-        int bLength;
         class Agent* b;
         struct agent_type* b_struct;
         if(my_rank == 0) {
@@ -208,7 +201,6 @@ int main(int argc, char* argv[]){
         bLength = aLength - amountToPrune;
         
         start_prune = MPI_Wtime();
-
         //******** PRUNING ON THREADS********//
         if (my_rank == 0) {
             if(serialPrune == 0) {
@@ -224,7 +216,7 @@ int main(int argc, char* argv[]){
                 //printf("bLength_loc = %i ", bLength_loc);
             }
         }
-
+		//******** START ALL PRUNE ********//
         // send things to all ranks and then prune as long as we are not doing the serial prune
         if(serialPrune == 0) {
             MPI_Bcast(&aLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -232,7 +224,6 @@ int main(int argc, char* argv[]){
             MPI_Bcast(&extraAmountToPrune,1,MPI_INT,0,MPI_COMM_WORLD);
             MPI_Bcast(&extraALength,1,MPI_INT,0,MPI_COMM_WORLD);
             MPI_Bcast(&bLength_loc,1,MPI_INT,0,MPI_COMM_WORLD);
-            MPI_Barrier(MPI_COMM_WORLD);
             int pruneAmount_l = amountToPrune_loc;
             if(my_rank == comm_sz-1){
                 pruneAmount_l = amountToPrune_loc + extraAmountToPrune;
@@ -262,12 +253,10 @@ int main(int argc, char* argv[]){
                 MPI_Scatterv(a_struct,counts,displacements,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
                 delete[] a_struct;
             }
-
             else {
                 MPI_Scatterv(NULL,NULL,NULL,agent_type,a_loc,aLength_loc,agent_type,0,MPI_COMM_WORLD);
             }
             
-            MPI_Barrier(MPI_COMM_WORLD);
             // convert a_loc from struct to agent for the pruning process          
             class Agent* a_agent_loc = new class Agent[aLength_loc];
             for(int x = 0;x<aLength_loc;x++){
@@ -277,10 +266,6 @@ int main(int argc, char* argv[]){
             
             // Do the actual pruning on each thread on the chunk they have been given
             utility->Prune(a_agent_loc, b_agent_loc, aLength_loc, long(pruneAmount_l));
-
-            // MPI_Barrier(MPI_COMM_WORLD);
-            // printf("my rank %i,aLength_loc %i, pruneAmount_l %i,  \n",my_rank,aLength_loc,pruneAmount_l);
-            // MPI_Barrier(MPI_COMM_WORLD);
 
             struct agent_type* b_loc = new struct agent_type[aLength_loc - pruneAmount_l];
             // convert the agent b_loc to struct for gathering with MPI
@@ -311,14 +296,11 @@ int main(int argc, char* argv[]){
             else{
                 MPI_Gatherv(b_loc,aLength_loc-pruneAmount_l,agent_type,NULL,NULL,NULL,agent_type,0,MPI_COMM_WORLD);
             }
-            MPI_Barrier(MPI_COMM_WORLD);
-
 		    //******** END PRUNING ON THREADS********//
             delete[] b_loc;
         }
         finish_prune = MPI_Wtime();
         loc_elapsed_prune += finish_prune-start_prune;
-
 
         // serial prune when serial prune is activated by high percentage of 0 velocities
         if(my_rank == 0) {
@@ -339,17 +321,18 @@ int main(int argc, char* argv[]){
                     serialPrune = 0;
                 }
             }
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (serialPrune != 0) {
-            MPI_Bcast(&bLength,1,MPI_INT,0,MPI_COMM_WORLD);
-        }
-        if(my_rank == 0) {
-            printf("Percentage of negative velocities %f\n",b[0].percentage);
-            if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
+            //printf("Percentage of negative velocities %f\n",b[0].percentage);
+            if(b[0].percentage > (((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)) && (b[0].percentage!=0)){
                 serialPrune = 1;
+                printf("activating serial prune from rank: %i\n", my_rank);
+            }
+            else {
+                serialPrune = 0;
+                //printf("reseting serial prunefrom rank: %i\n", my_rank);
             }
         }
+        MPI_Bcast(&bLength,1,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Bcast(&serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);        
 		//******** END PRUNING ********//
 
 
@@ -364,17 +347,10 @@ int main(int argc, char* argv[]){
                     maxDY = b[x].positionY;
                 }
             }
-            printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY); 
+            printf("Max Distance is %f, at (%f,%f) from rank %i \n",maxDistance,maxDX,maxDY, my_rank); 
         }
         
-
-
-
-
-
-
         //**********START STEP ALL***********//
-        MPI_Barrier(MPI_COMM_WORLD);
         start_step = MPI_Wtime();
 
         // make small agents of size bLength/comm_sz and then have extra for the last one
@@ -404,17 +380,18 @@ int main(int argc, char* argv[]){
                 displacements[x] = x*bLength_loc;
             }
             counts[comm_sz-1] += extraBLength;
-
             MPI_Scatterv(b_struct,counts,displacements,agent_type,b_loc,bLength_loc,agent_type,0,MPI_COMM_WORLD);
         }
         else{
             MPI_Scatterv(NULL,NULL,NULL,agent_type,b_loc,bLength_loc,agent_type,0,MPI_COMM_WORLD);
         }
+
         // convert b_loc from struct to agent
         class Agent* b_agent_loc = new class Agent[bLength_loc];
         for(int x = 0;x<bLength_loc;x++){
                 b_agent_loc[x] = StructToAgent(b_loc[x]);
         }
+
         // make agent a local for output
         class Agent* a_agent_loc;                                           // agent a_loc
         a_agent_loc = new class Agent[aLength_loc];
@@ -429,7 +406,7 @@ int main(int argc, char* argv[]){
                 a_loc[x] = AgentToStruct(a_agent_loc[x]);
         }
         delete[] a_agent_loc;
-        
+
         // gather the structure data from the pruning process
         if(my_rank == 0){
             struct agent_type* a_struct = new struct agent_type[aLength];
@@ -439,11 +416,8 @@ int main(int argc, char* argv[]){
                 counts[x] = aLength_loc;
                 displacements[x] = x*aLength_loc;
             }
-            
             counts[comm_sz-1] += extraBLength*numberOfDirectionSpawn;
-
             MPI_Gatherv(a_loc,aLength_loc,agent_type,a_struct,counts,displacements,agent_type,0,MPI_COMM_WORLD);
-
             a = new class Agent[aLength];
             // convert a from struct to agent
             for(int x = 0;x<aLength;x++){
@@ -455,29 +429,13 @@ int main(int argc, char* argv[]){
             MPI_Gatherv(a_loc,aLength_loc,agent_type,NULL,NULL,NULL,agent_type,0,MPI_COMM_WORLD);
         }
         finish_step = MPI_Wtime();
-        loc_elapsed_step += finish_step-start_step;
-        
+        loc_elapsed_step += finish_step-start_step; 
         //******** END OF STEP ALL************
 
-        // MPI_Barrier(MPI_COMM_WORLD);
-
-        // if (my_rank==0){
-        //     for(int x = 0;x<aLength;x++){
-        //         printf("END STEP     In PositionX, %f, PositionY %f, Velocity %f, height %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height);
-        //     }
-        // }
-        MPI_Barrier(MPI_COMM_WORLD);
-        // //
-
-
         loopAmount++;
-
 	}
-    //if (my_rank == 0)
-	    //printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-        // end all timings
+    
+    // end all timings
     finish_1 = MPI_Wtime();
     loc_elapsed_1 = finish_1-start_1;
     MPI_Reduce(&loc_elapsed_1, &elapsed_1, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -490,14 +448,10 @@ int main(int argc, char* argv[]){
         printf("Elapsed prune time = %e\n", elapsed_prune);
     if (my_rank == 0)
         printf("Elapsed step comp time = %e\n", elapsed_step);
-    MPI_Barrier(MPI_COMM_WORLD);
     /* Shut down MPI */
     MPI_Finalize();
-	
     return 0;
 }
-
-
 
 void Usage(char* prog_name){
 	fprintf(stderr, "usage: %s <file_name> <starting_count> <starting_x> <starting_y> <direction_spawn_radius> <number_of_direction_spawn> <travel_distance> <start_velocity> <max_agent_count> <friction> <run_type>\n",prog_name);
