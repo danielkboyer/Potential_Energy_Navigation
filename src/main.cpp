@@ -118,7 +118,7 @@ int main(int argc, char* argv[]){
 			//printf("Amount to prune: %ld\n",amountToPrune);
 			bLength = aLength - amountToPrune;
 			b = new Agent[bLength];
-			utility->Prune(a,b, aLength, long(amountToPrune));
+			utility->Prune(a,b, aLength, long(amountToPrune), properties);
 			
 			printf("Percentage of negative velocities %f\n",b[0].percentage);
 			if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
@@ -151,7 +151,6 @@ int main(int argc, char* argv[]){
 		total_prune_time += end_prune_time - prune_start;
 		//******** END PRUNING ********//
 		
-		// maybe only do this once at the end of the function? 
 		// Count how mant were pruned
 			// This takes just as long as pruning O(n) (minus the computation piece per n) 
 			// but parallel is also serial from critical section 
@@ -178,10 +177,9 @@ int main(int argc, char* argv[]){
 		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
 
-		//  for(int x = 0;x<aLength;x++){
-        // printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height,properties.gravity,properties.friction);
-    
-    	// }
+		for(int x = 0;x<aLength;x++){
+        	printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height,properties.gravity,properties.friction);
+    	}
 		GET_TIME(end_stepping_time);
 		elapsed_stepping_time += end_stepping_time-start_stepping_time;
 		delete[] b;

@@ -25,19 +25,15 @@ void ShuffleSerial(Agent* agents, int count){
         int index1 = intRandSerial(0,count-1);
         int index2 = intRandSerial(0,count-1);
         SwapValueSerial(agents[index1],agents[index2]);
-
     }
-
 }
 
 void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
     int x, y, aIndex;
     float newDirection;
-#   pragma omp parallel num_threads(properties.threadCount) default(none) private(x,y,aIndex,newDirection) shared(out,in,properties,map,inCount)
-    //printf("Thread rank: %d\n", omp_get_thread_num());
     
     // make this for loop parallel, this is the outer loop of the sorting function
-#   pragma omp for
+#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x,y,aIndex,newDirection) shared(out,in,properties,map,inCount)
     for(x = 0;x<inCount;x++){
         //printf("parrallel or not %d \n", properties.threadCount);
         aIndex = x*properties.numberOfDirectionSpawn;
@@ -85,30 +81,75 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 //     //     //printf("ID pruned: %ld\n", x);
 //     // }
 // }
-void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
+
+// Origional
+// void Serial_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune, Properties properties){
+//     long keepAmount = count - amountToPrune;
+//     ShuffleSerial(agents,count);
+//     vector<int> good;
+//     vector<int> bad;
+//     for(int x = 0;x<count;x++){
+//         if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
+//             agents[x].pruned = true;
+//             bad.push_back(x);
+//         }
+//         else{
+//             good.push_back(x);
+//         }
+//     }
+//     for(int x =0 ;x<keepAmount;x++){
+//         if(x >= good.size()){
+//             out[x] = agents[bad[x-good.size()]];
+//             continue;
+//         }
+//         out[x] = agents[good[x]];
+//     }
+//     out[0].percentage = ((float)(bad.size()))/(float)count;
+// }
+
+
+// created from GPU
+void Serial_Util::Prune(Agent* agents, Agent* out, long count, long amountToPrune,Properties properties){
     long keepAmount = count - amountToPrune;
+
     ShuffleSerial(agents,count);
-    vector<int> good;
-    vector<int> bad;
-    int currentIndex = 0;
-    for(int x = 0;x<count;x++){
+    int* good = new int[count];
+    int* bad = new int[count];
+    int goodCount = 0;
+    int badCount = 0;
+    int x;
+    
+    // make this for loop parallel
+//#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x,aIndex,newDirection) shared(agents,out,goodCount,badCount,count,good,bad)
+    for(x = 0;x<count;x++){
         if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
             agents[x].pruned = true;
-            bad.push_back(x);
+            bad[badCount++] = x;
         }
         else{
-            good.push_back(x);
+            good[badCount++] = x;
         }
     }
-    for(int x =0 ;x<keepAmount;x++){
-        if(x >= good.size()){
-            out[x] = agents[bad[x-good.size()]];
+// make this for loop parallel
+//#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x,aIndex,newDirection) shared(agents,out,goodCount,amountToPrune,keepAmount,good,bad)
+    for(x =0 ;x<keepAmount;x++){
+        if(goodCount <=x ){
+            if (x < amountToPrune) {
+                out[x] = agents[ bad[x-badCount] ];
+            }
             continue;
         }
-        out[x] = agents[good[x]];
+        if (x < amountToPrune){
+            out[x] = agents[good[x]];
+        }
     }
-    out[0].percentage = ((float)(bad.size()))/(float)count;
+
+    out[0].percentage = ((float)(badCount))/(float)count;
+    printf("good count %i, bad count %i\n", goodCount, badCount);
+    delete[] good;
+    delete[] bad;
 }
+
 
 
 

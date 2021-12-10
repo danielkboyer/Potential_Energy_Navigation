@@ -1,6 +1,6 @@
 lib/run_me simple_env.txt 30 10 10 1.5 3 .2 1 30000 .98 0
 lib_omp/run_me simple_env.txt 30 10 10 1.5 3 .2 1 30000 .98 0 4
-mpirun -np 4 lib_mpi/run_me simple_env.txt 30 10 10 1.5 3 .2 1 30000 .98 2
+mpirun -np 16 lib_mpi/run_me simple_env.txt 30 10 10 1.5 3 .2 1 30000 .98 2
 
 For debugging mpirun    
         mpirun --mca all all -np 4 lib_mpi/run_me simple_env.txt 30 10 10 1.5 3 .2 1 30000 .98 2
