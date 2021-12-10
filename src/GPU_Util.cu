@@ -280,7 +280,7 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
 
 
 
-void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune,Properties properties){
+void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune, Properties properties){
 
     int apt = 16;
     int amountToAdd = count%512;

@@ -111,13 +111,15 @@ int main(int argc, char* argv[]){
 		long amountToPrune;
 		int bLength;
 		Agent* b;
+		amountToPrune = max(aLength - maxAgentCount,(long)0);
+
 		GET_TIME(prune_start)
 		if(serialPrune == false)
 		{
-			amountToPrune = max(aLength - maxAgentCount,(long)0);
 			//printf("Amount to prune: %ld\n",amountToPrune);
 			bLength = aLength - amountToPrune;
 			b = new Agent[bLength];
+			printf("starting prune amountToPrune: %ld\n",amountToPrune);
 			utility->Prune(a,b, aLength, long(amountToPrune), properties);
 			
 			printf("Percentage of negative velocities %f\n",b[0].percentage);
@@ -177,9 +179,9 @@ int main(int argc, char* argv[]){
 		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
 
-		for(int x = 0;x<aLength;x++){
-        	printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height,properties.gravity,properties.friction);
-    	}
+		// for(int x = 0;x<aLength;x++){
+        // 	printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height,properties.gravity,properties.friction);
+    	// }
 		GET_TIME(end_stepping_time);
 		elapsed_stepping_time += end_stepping_time-start_stepping_time;
 		delete[] b;

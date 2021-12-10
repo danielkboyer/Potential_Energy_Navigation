@@ -35,7 +35,7 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
     // make this for loop parallel, this is the outer loop of the sorting function
 #   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x,y,aIndex,newDirection) shared(out,in,properties,map,inCount)
     for(x = 0;x<inCount;x++){
-        //printf("parrallel or not %d \n", properties.threadCount);
+        //printf("loop 1 parrallel or not %d \n", omp_get_num_threads());
         aIndex = x*properties.numberOfDirectionSpawn;
 		for(y = 0;y<properties.numberOfDirectionSpawn;y++){
 			newDirection = in[x].direction - properties.directionSpawnRadius/2 + properties.directionSpawnRadius/(properties.numberOfDirectionSpawn-1) * y;
@@ -118,34 +118,40 @@ void Serial_Util::Prune(Agent* agents, Agent* out, long count, long amountToPrun
     int goodCount = 0;
     int badCount = 0;
     int x;
-    
-    // make this for loop parallel
-//#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x,aIndex,newDirection) shared(agents,out,goodCount,badCount,count,good,bad)
+
     for(x = 0;x<count;x++){
         if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
             agents[x].pruned = true;
             bad[badCount++] = x;
         }
         else{
-            good[badCount++] = x;
+            good[goodCount++] = x;
         }
     }
+
 // make this for loop parallel
-//#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x,aIndex,newDirection) shared(agents,out,goodCount,amountToPrune,keepAmount,good,bad)
+#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x) shared(agents,out,goodCount,amountToPrune,keepAmount,good,bad)
     for(x =0 ;x<keepAmount;x++){
+        //printf("loop 3 parrallel or not %d \n", omp_get_num_threads());
         if(goodCount <=x ){
             if (x < amountToPrune) {
-                out[x] = agents[ bad[x-badCount] ];
+                out[x] = agents[ bad[x-goodCount] ];
             }
-            continue;
+            else if (amountToPrune == 0){
+                out[x] = agents[x];
+            }
         }
-        if (x < amountToPrune){
+        else if (x < amountToPrune){
             out[x] = agents[good[x]];
+
+        }
+        else if (amountToPrune == 0){
+            out[x] = agents[x];
         }
     }
 
     out[0].percentage = ((float)(badCount))/(float)count;
-    printf("good count %i, bad count %i\n", goodCount, badCount);
+    printf("good count %i, bad count %i, amount to keep %i, and ammount to prune %i\n", goodCount, badCount,keepAmount,amountToPrune);
     delete[] good;
     delete[] bad;
 }
