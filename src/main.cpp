@@ -4,24 +4,14 @@
 #include <math.h>
 #include <omp.h>
 
-
+#include "timer.h" // use this for getting times
 #include "Agent.h"
 #include "Util.h"
 #include "FileWriter.h"
 #include "Serial_Util.h"
 #include "GPU_Util.h"
 #include "vector"
-static inline uint64_t rdtsc() {
-    uint32_t lo, hi;
-    __asm__ __volatile__ (
-      "xorl %%eax, %%eax\n"
-      "cpuid\n"
-      "rdtsc\n"
-      : "=a" (lo), "=d" (hi)
-      :
-      : "%ebx", "%ecx");
-    return (uint64_t)hi << 32 | lo;
-}
+
 void Usage(char* prog_name);
 
 int main(int argc, char* argv[]){
@@ -48,15 +38,18 @@ int main(int argc, char* argv[]){
 		threadCount = stoi(argv[12]);
 
 	//********** END Collect arguments **********
-	unsigned long long start_total_time = rdtsc();
-	unsigned long long elapsed_total_time=0;
+	double start_total_time=0;
+	double elapsed_total_time=0;
+	double end_total_time=0;
+	GET_TIME(start_total_time);
 
-    unsigned long long start_stepping_time;
-    unsigned long long end_stepping_time;
+    double start_stepping_time=0;
+    double end_stepping_time=0;
+	double elapsed_stepping_time=0;
 
-	unsigned long long elapsed_stepping_time=0;
-	
-	unsigned long long total_prune_time = 0;
+	double total_prune_time = 0;
+	double end_prune_time = 0;
+	double prune_start = 0;
 
 	
 	printf("Initializing FileWriter\n");
@@ -118,7 +111,7 @@ int main(int argc, char* argv[]){
 		long amountToPrune;
 		int bLength;
 		Agent* b;
-		unsigned long long prune_start = rdtsc();
+		GET_TIME(prune_start)
 		if(serialPrune == false)
 		{
 			amountToPrune = max(aLength - maxAgentCount,(long)0);
@@ -154,7 +147,8 @@ int main(int argc, char* argv[]){
 			printf("B Length Serial %i \n",bLength);
 
 		}
-		total_prune_time += rdtsc() - prune_start;
+		GET_TIME(end_prune_time);
+		total_prune_time += end_prune_time - prune_start;
 		//******** END PRUNING ********//
 		
 		// maybe only do this once at the end of the function? 
@@ -180,7 +174,7 @@ int main(int argc, char* argv[]){
 		aLength = bLength*numberOfDirectionSpawn; 
 		a = new Agent[aLength]; // spawn all new agents
 
-		start_stepping_time = rdtsc();
+		GET_TIME(start_stepping_time);
 		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
 
@@ -188,8 +182,8 @@ int main(int argc, char* argv[]){
         // printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height,properties.gravity,properties.friction);
     
     	// }
-		end_stepping_time= rdtsc();
-		elapsed_stepping_time+=end_stepping_time-start_stepping_time;
+		GET_TIME(end_stepping_time);
+		elapsed_stepping_time += end_stepping_time-start_stepping_time;
 		delete[] b;
 		loopAmount++;
 
@@ -197,11 +191,11 @@ int main(int argc, char* argv[]){
 		// 	return 0;
 		// }
 	}
-	unsigned long long end_total_time = rdtsc();
+	GET_TIME(end_total_time);
 	elapsed_total_time = end_total_time-start_total_time;
-	printf("Total time  %lld\n", elapsed_total_time);
-	printf("Stepping time  %lld\n", elapsed_stepping_time);
-	printf("Prune time is %lld\n",total_prune_time) ;
+	printf("Total time  %lf\n", elapsed_total_time);
+	printf("Stepping time  %lf\n", elapsed_stepping_time);
+	printf("Prune time is %lf\n",total_prune_time) ;
 	printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 	return 0;
 }
