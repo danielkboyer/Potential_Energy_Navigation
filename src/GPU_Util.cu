@@ -43,19 +43,19 @@ __host__ __device__ float Agent::Energy(float gravity, float friction){
 __global__
 void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map);
 
-//__device__
+__device__
 int intRandGPU(const int & min, const int & max) {
-    static thread_local std::mt19937 generator;
+    static std::mt19937 generator;
     std::uniform_int_distribution<int> distribution(min,max);
     return distribution(generator);
 }
-//__device__
+__device__
 void SwapValueGPU(Agent &a, Agent &b) {
    Agent t = a;
    a = b;
    b = t;
 }
-//__device__
+__device__
 void ShuffleGPU(Agent* agents, int count){
 
     for(int x = 0;x<count;x++){
@@ -67,7 +67,7 @@ void ShuffleGPU(Agent* agents, int count){
 
 }
 
-__global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int apt, Properties* properties, Map* map){
+__global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int apt, Properties* properties, Map* map,Point* points){
 
     int x = blockDim.x;
 
@@ -77,24 +77,31 @@ __global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int a
     
     int x_t = threadIdx.x;
 
-    int mainId = (x_b * 512)+(y_b*x*512)+x_t;
+    int mainId = ((x_b * 512)+(y_b*x*512)+x_t)*apt;
+    //printf("Main ID: %i\n",mainId);
     int outId =mainId * properties->numberOfDirectionSpawn;
-    for(int x = 0;x<apt && (mainId*apt + x) < inCount;x++){
-        printf("Looping, mainid:%i\n",mainId);
+    for(int x = 0;x<apt && (outId+ x) < outCount;x++){
+        //printf("Looping, mainid:%i\n",mainId);
 		int aIndex = x*properties->numberOfDirectionSpawn;
         //printf("Number of direction spawn %f\n",properties->numberOfDirectionSpawn);
         //printf("Travel Distance %f\n",properties->travelDistance);
 		for(int y = 0;y<(int)properties->numberOfDirectionSpawn;y++){
             
-			float newDirection = in[x].direction - properties->directionSpawnRadius/2 + properties->directionSpawnRadius/(properties->numberOfDirectionSpawn-1) * y;
-			
             int inIndex = mainId + x;
             int outIndex = outId + aIndex + y;
             
-            printf("Creating agent. OutIndex: %i\n",outIndex);
+            //printf("Main ID: %i, OutIndex: %i, InIndex: %i\n",mainId,outIndex,inIndex);
             Agent outAgent;
             outAgent.pruned = false;
             Agent inAgent = in[inIndex];
+            if(inAgent.pruned == true){
+                outAgent.pruned = true;
+                out[outIndex] = outAgent;
+                continue;
+            }
+			float newDirection = inAgent.direction - properties->directionSpawnRadius/2 + properties->directionSpawnRadius/(properties->numberOfDirectionSpawn-1) * y;
+			
+            
             //printf("In Agent = PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",inAgent.positionX,inAgent.positionY,inAgent.velocity,inAgent.height,properties->gravity,properties->friction);
     
             outAgent.positionX = inAgent.positionX + cos(newDirection) * properties->travelDistance;
@@ -107,37 +114,29 @@ __global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int a
             int startX = floor(inAgent.positionX/map->_pointDistance);
             int startY = floor(inAgent.positionY/map->_pointDistance);
             //printf("StartX: %d , StartY: %d\n",startX,startY);
-            if(startX < 0)
-                outAgent.height = NAN;
-            if(startX +1 >= map->_width)
-                outAgent.height = NAN;
-            if(startY -1 < 0)
-                outAgent.height = NAN;
-            if(startY >= map->_height)
-                outAgent.height = NAN;
-            //printf("x %f, y %f\n",x/_pointDistance,y/_pointDistance);
-            float xPoint = x/map->_pointDistance - startX;
-            float yPoint = y/map->_pointDistance - startY;
-            //printf("yPoint %f, xPoint %f\n",yPoint,xPoint);
-            //printf("Out Agent = PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",outAgent.positionX,outAgent.positionY,outAgent.velocity,outAgent.height,properties->gravity,properties->friction);
-            //printf("Map Pointe distance %f\n",map->_pointDistance);
-            //printf("Map Pointe %f\n",points[0].height);
-            for(int t = 0;t<map->_width;t++){
-                printf("GPU Map: %f\n",map->points[t].height);
-            }
-            // outAgent.height = (map->_pointDistance - xPoint)*(map->_pointDistance - yPoint)*(points[startY][startX].height) + 
-            //         (map->_pointDistance)*(map->_pointDistance - yPoint)*(points[startY][startX+1].height) +
-            //         (map->_pointDistance - xPoint)*(map->_pointDistance)*(points[startY-1][startX].height) +
-            //         (map->_pointDistance)*(map->_pointDistance)*(points[startY-1][startX+1].height);
 
-            //printf("Out Agent = PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",outAgent.positionX,outAgent.positionY,outAgent.velocity,outAgent.height,properties->gravity,properties->friction);
+            if(startX < 0 || startX +1 >= map->_width || startY -1 < 0 || startY >= map->_height){
+                outAgent.height = NAN;
+                outAgent.pruned = true;
+                
+                out[outIndex] = outAgent;
+                continue;
+            }
+            float xPoint = inAgent.positionX/map->_pointDistance - startX;
+            float yPoint = inAgent.positionY/map->_pointDistance - startY;
+
+            outAgent.height = (map->_pointDistance - xPoint)*(map->_pointDistance - yPoint)*(points[startY*map->_width+startX].height) + 
+                    (map->_pointDistance)*(map->_pointDistance - yPoint)*(points[startY*map->_width+ startX+1].height) +
+                    (map->_pointDistance - xPoint)*(map->_pointDistance)*(points[(startY-1)*map->_width+ startX].height) +
+                    (map->_pointDistance)*(map->_pointDistance)*(points[(startY-1)*map->_width + startX+1].height);
+
+            
 
             //done getting height
             if(isnan(outAgent.height) || (2*properties->gravity*(inAgent.height - outAgent.height) + inAgent.velocity*inAgent.velocity) < 0){
               
                 outAgent.pruned = true;
-                //printf("Out Agent = PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",outAgent.positionX,outAgent.positionY,outAgent.velocity,outAgent.height,properties->gravity,properties->friction);
-    
+                
                 out[outIndex] = outAgent;
                 continue;
             }
@@ -160,10 +159,12 @@ __global__ void GPU_Step(Agent* in, int inCount, Agent* out, int outCount, int a
 void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
 
     //10
+    //printf("OUT COUNT: %i\n",outCount);
     //10
     //10
-    int atp = 50;
-    int gridNumber = (int)ceil(sqrt(((float)inCount/(float)atp))/(float)512);
+    int atp = 9;
+    int gridNumber = (int)ceil(((float)inCount/(float)atp)/(float)512);
+    //printf("Grid Number: %i\n",gridNumber);
     dim3 DimGrid(gridNumber,gridNumber,1);
     dim3 DimBlock(512,1,1);
 
@@ -171,23 +172,21 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
     Agent* out_d;
     Properties* properties_d;
     Map* map_d;
+    Point* points_d;
 
 
-    printf("PROPERTIES : NUMBER %f\n",properties.numberOfDirectionSpawn);
+    //printf("PROPERTIES : NUMBER %f\n",properties.numberOfDirectionSpawn);
 
-
-    Point* pointer;
-
-    cudaMalloc((void **)&pointer->points,sizeof(Point *));
     ///POINTS MEMORY
-    cudaMalloc((void **)&map_d,sizeof(Map));
-    cudaMemcpy(map_d,&map,sizeof(Map),cudaMemcpyHostToDevice);
+    //cudaMalloc((void **)&map_d,sizeof(Map));
+    //cudaMemcpy(map_d,&map,sizeof(Map),cudaMemcpyHostToDevice);
 
-    Point *temp_data;
-    cudaMalloc((void **)&(temp_data),sizeof(Point)*map._width*map._height);
-    cudaMemcpy(&(map_d->points),&(temp_data),sizeof(Point)*map._width*map._height,cudaMemcpyHostToDevice);
+    cudaMalloc((void **)&points_d,sizeof(Point)*map._width*map._height);
+    cudaMemcpy(points_d,map.points,sizeof(Point)*map._width*map._height,cudaMemcpyHostToDevice);
 
-    cudaMemcpy(temp_data,map.points,sizeof(Point)*map._width*map._height,cudaMemcpyHostToDevice);
+    cudaMalloc((void **)&map_d, sizeof(Map));
+    cudaMemcpy(map_d,&map, sizeof(Map),cudaMemcpyHostToDevice);
+    //cudaMemcpy(temp_data,map.points,sizeof(Point)*map._width*map._height,cudaMemcpyHostToDevice);
     
 
     //End Point Memory
@@ -195,37 +194,59 @@ void GPU_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Propert
 
     cudaMalloc((void **)&out_d,outCount*sizeof(Agent));
     cudaMalloc((void **)&in_d,inCount*sizeof(Agent));
-    for(int x = 0;x<map._width*map._height;x++){
-        //printf("Map at %i,%f\n",x,points_h[x].height);
-    }
-    printf("Values %i,%i,%i\n",map._width,map._height,map._width*map._height);
+
     
-    
-    printf("Got Here\n");
     cudaMemcpy(properties_d,&properties,sizeof(Properties),cudaMemcpyHostToDevice);
-    printf("Got Here\n");
+
     cudaMemcpy(in_d,in,inCount*sizeof(Agent),cudaMemcpyHostToDevice);
-    printf("Got Here\n");
-    GPU_Step<<<DimGrid,DimBlock>>>(in_d,inCount,out_d,outCount,atp,properties_d,map_d);
+
+    GPU_Step<<<DimGrid,DimBlock>>>(in_d,inCount,out_d,outCount,atp,properties_d,map_d,points_d);
     cudaDeviceSynchronize();
     cudaMemcpy(out,out_d,outCount*sizeof(Agent),cudaMemcpyDeviceToHost);
-    
-    for(int x = 0;x<outCount;x++){
-        printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out[x].positionX,out[x].positionY,out[x].velocity,out[x].height,properties.gravity,properties.friction);
-    
-    }
+    cudaFree(in_d);
+    cudaFree(out_d);
+    cudaFree(properties_d);
+    cudaFree(map_d);
+    cudaFree(points_d);
+    // for(int x = 0;x<outCount;x++){
+    //     printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out[x].positionX,out[x].positionY,out[x].velocity,out[x].height,properties.gravity,properties.friction);
+    // }
 }
 
+__constant__ int prune_apt = 16;
+__global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTotal, long aptP){
+    int x = blockDim.x;
 
+    int x_b = blockIdx.x;
+    int y_b = blockIdx.y;
+   
+    
+    int x_t = threadIdx.x;
+    long keepAmount = prune_apt - aptP;
+    int mainId = ((x_b * 512)+(y_b*x*512)+x_t)*prune_apt;
+    if(mainId < count){
+        return;
+    }
+    int outId = ((x_b * 512)+(y_b*x*512)+x_t)*keepAmount;
+    
+    Agent my_local_agents[prune_apt];
+    for(int x = 0;x<prune_apt;x++){
+        if(mainId+x < count){
+        my_local_agents[x] = agents[mainId+x];
+        }
+        else{
+            Agent dummy;
+            dummy.pruned = true;
+            my_local_agents[x] = dummy;
+        }
+    }
 
-void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
-    long keepAmount = count - amountToPrune;
-    ShuffleGPU(agents,count);
+    ShuffleGPU(my_local_agents,prune_apt);
     vector<int> good;
     vector<int> bad;
-    for(int x = 0;x<count;x++){
-        if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
-            agents[x].pruned = true;
+    for(int x = 0;x<prune_apt;x++){
+        if(isnan(my_local_agents[x].velocity) || my_local_agents[x].velocity <= 0 || my_local_agents[x].pruned == true){
+            my_local_agents[x].pruned = true;
             bad.push_back(x);
         }
         else{
@@ -234,12 +255,45 @@ void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
     }
     for(int x =0 ;x<keepAmount;x++){
         if(x >= good.size()){
-            out[x] = agents[bad[x-good.size()]];
+            if(mainId+x < pruneAmountTotal){
+                out[outId+x] = my_local_agents[bad[x-good.size()]];
+            }
             continue;
         }
-        out[x] = agents[good[x]];
+        if(mainId+x < pruneAmountTotal){
+            out[outId+x] = my_local_agents[good[x]];
+        }
     }
-    out[0].percentage = ((float)(bad.size()))/(float)count;
+    out[outId].percentage = ((float)(bad.size()))/(float)prune_apt;
+}
+
+void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune){
+
+    int amountToAdd = count%512;
+    
+    int gridNumber = (int)ceil(((float)(count+amountToAdd)/(float)prune_apt)/(float)512);
+    int randomPerThread = (count+amountToAdd)/512/pow(gridNumber,2);
+    //printf("Grid Number: %i\n",gridNumber);
+    dim3 DimGrid(gridNumber,gridNumber,1);
+    dim3 DimBlock(512,1,1);
+
+    Agent* in_d;
+    Agent* out_d;
+
+
+    cudaMalloc((void **)&out_d,(count-amountToPrune)*sizeof(Agent));
+    cudaMalloc((void **)&in_d,count*sizeof(Agent));
+
+    
+    cudaMemcpy(out_d,&out,sizeof(Agent)*(count-amountToPrune),cudaMemcpyHostToDevice);
+
+    cudaMemcpy(in_d,agents,count*sizeof(Agent),cudaMemcpyHostToDevice);
+
+    PruneGPU<<<DimGrid,DimBlock>>>(in_d,out_d,count,(count-amountToPrune),randomPerThread);
+    cudaDeviceSynchronize();
+    cudaMemcpy(out,out_d,(count-amountToPrune)*sizeof(Agent),cudaMemcpyDeviceToHost);
+    cudaFree(in_d);
+    cudaFree(out_d);
 }
 
 

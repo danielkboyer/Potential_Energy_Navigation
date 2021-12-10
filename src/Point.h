@@ -1,14 +1,9 @@
 #pragma once
 using namespace std;
 #include<iostream>
-class Point
+struct Point
 {
-
-    public:
-        Point(int x, int y, float height);
-        Point();
         int x;
         int y;
         float height;
-        
 };

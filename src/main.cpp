@@ -11,7 +11,6 @@
 #include "Serial_Util.h"
 #include "GPU_Util.h"
 #include "vector"
-
 static inline uint64_t rdtsc() {
     uint32_t lo, hi;
     __asm__ __volatile__ (
@@ -41,6 +40,8 @@ int main(int argc, char* argv[]){
 	long maxAgentCount = stol(argv[9]);
 	float friction = stof(argv[10]);
 	int runType = stoi(argv[11]);
+
+
 	// get threads for Pragma omp
 	int threadCount = 0;
 	if (argc==13)
@@ -126,13 +127,14 @@ int main(int argc, char* argv[]){
 			b = new Agent[bLength];
 			utility->Prune(a,b, aLength, long(amountToPrune));
 			
-			//printf("Percentage of negative velocities %f\n",b[0].percentage);
+			printf("Percentage of negative velocities %f\n",b[0].percentage);
 			if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
 				serialPrune = true;
 			}
 		}
 		else{
 
+			printf("Serial prune\n");
 			vector<int> good;
 			for(int x = 0;x<aLength;x++){
 				if(a[x].pruned == false){
@@ -149,6 +151,7 @@ int main(int argc, char* argv[]){
 			{
 				serialPrune = false;
 			}
+			printf("B Length Serial %i \n",bLength);
 
 		}
 		total_prune_time += rdtsc() - prune_start;
@@ -165,7 +168,9 @@ int main(int argc, char* argv[]){
 				maxDX = b[x].positionX;
 				maxDY = b[x].positionY;
 			}
+			
 		}
+		printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 		//printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 		//Write to file here, this is probbaly the same for each implimentation
 		fileWriter.Write(b,startAgentId);
@@ -178,10 +183,19 @@ int main(int argc, char* argv[]){
 		start_stepping_time = rdtsc();
 		//Perform the step all in parallell, different for impilimentation
 		utility->StepAll(b,bLength,a,aLength,properties,map);
+
+		//  for(int x = 0;x<aLength;x++){
+        // printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",a[x].positionX,a[x].positionY,a[x].velocity,a[x].height,properties.gravity,properties.friction);
+    
+    	// }
 		end_stepping_time= rdtsc();
 		elapsed_stepping_time+=end_stepping_time-start_stepping_time;
 		delete[] b;
 		loopAmount++;
+
+		// if(loopAmount == 5){
+		// 	return 0;
+		// }
 	}
 	unsigned long long end_total_time = rdtsc();
 	elapsed_total_time = end_total_time-start_total_time;

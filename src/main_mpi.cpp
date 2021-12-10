@@ -183,7 +183,6 @@ int main(int argc, char* argv[]){
     int extraALength=0;
     int extraAmountToPrune=0;
     int aLength_loc = 0;
-
 	MPI_Barrier(MPI_COMM_WORLD);
     while(aLength > 0){
 		//Start Loop
@@ -191,8 +190,13 @@ int main(int argc, char* argv[]){
         // broadcast this variable out at the start of each loop from rank 0
         // int serialPrune_p;
 		// MPI_Bcast(&serialPrune_p,1,MPI_INT,0,MPI_COMM_WORLD);
+        printf("before serialPrune %i on rank %i \n", serialPrune, my_rank);
+        if(my_rank == 0){
+            printf("loop number %i\n",loopAmount);
+        }
         
-        MPI_Bcast(&serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);
+       
+      
         
         MPI_Barrier(MPI_COMM_WORLD);
         printf("serialPrune %i on rank %i \n", serialPrune, my_rank);
@@ -212,7 +216,7 @@ int main(int argc, char* argv[]){
         //******** PRUNING ON THREADS********//
         if (my_rank == 0) {
             if(serialPrune == 0) {
-                printf("Amount to prune: %ld\n",amountToPrune);
+                //printf("Amount to prune: %ld\n",amountToPrune);
                 // make variables for local computations
                 aLength_loc = floor(aLength/comm_sz);
                 //printf("aLength_loc = %i \n", aLength_loc);
@@ -345,14 +349,13 @@ int main(int argc, char* argv[]){
             MPI_Bcast(&bLength,1,MPI_INT,0,MPI_COMM_WORLD);
         }
         if(my_rank == 0) {
-            printf("Percentage of negative velocities %f\n",b[0].percentage);
+            //printf("Percentage of negative velocities %f\n",b[0].percentage);
             if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
                 serialPrune = 1;
             }
         }
 		//******** END PRUNING ********//
-
-
+        MPI_Bcast(&serialPrune,1,MPI_INT,0,MPI_COMM_WORLD);
 		if(my_rank == 0) {
             // Count how mant were pruned
                 // This takes just as long as pruning O(n) (minus the computation piece per n)
@@ -364,7 +367,7 @@ int main(int argc, char* argv[]){
                     maxDY = b[x].positionY;
                 }
             }
-            printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY); 
+            //printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY); 
         }
         
 
@@ -471,7 +474,7 @@ int main(int argc, char* argv[]){
 
 
         loopAmount++;
-
+        MPI_Barrier(MPI_COMM_WORLD);
 	}
     //if (my_rank == 0)
 	    //printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
@@ -490,6 +493,8 @@ int main(int argc, char* argv[]){
         printf("Elapsed prune time = %e\n", elapsed_prune);
     if (my_rank == 0)
         printf("Elapsed step comp time = %e\n", elapsed_step);
+    if (my_rank == 0)
+        printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
     MPI_Barrier(MPI_COMM_WORLD);
     /* Shut down MPI */
     MPI_Finalize();

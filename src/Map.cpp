@@ -75,7 +75,10 @@ void Map::ReadFile(string fileName){
             
             float z = stof(line);
             //printf("Creating point at (%d,%d)",currentIndex%_width,currentIndex/_height);
-            points[currentIndex] = Point(currentIndex%_width,currentIndex/_height,z);
+            points[currentIndex] = Point();
+            points[currentIndex].x = (int)(currentIndex%_width);
+            points[currentIndex].y = (int)(currentIndex/_height);
+            points[currentIndex].height = z;
             
             currentIndex++;
     }
