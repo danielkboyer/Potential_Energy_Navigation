@@ -188,7 +188,6 @@ int main(int argc, char* argv[]){
 		delete[] b;
 		loopAmount++;
 
-	
 
 	}
 	GET_TIME(end_total_time);

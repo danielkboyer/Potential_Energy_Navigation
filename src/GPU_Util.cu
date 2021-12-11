@@ -228,6 +228,7 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
     
     int x_t = threadIdx.x;
     long keepAmount = apt - aptP;
+    int pruneId = ((x_b * 512)+(y_b*x*512)+x_t)*aptP;
     int mainId = ((x_b * 512)+(y_b*x*512)+x_t)*apt;
     if(mainId >= count){
         return;
@@ -237,12 +238,10 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
     Agent* my_local_agents = new Agent[apt];
     for(int x = 0;x<apt;x++){
         if(mainId+x < count){
-        my_local_agents[x] = agents[mainId+x];
+            my_local_agents[x] = agents[mainId+x];
         }
         else{
-            Agent dummy;
-            dummy.pruned = true;
-            my_local_agents[x] = dummy;
+            printf("Something went wrong\n");
         }
     }
     ShuffleGPU(my_local_agents,apt,mainId);
@@ -260,15 +259,29 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
         }
     }
     
-    for(int x =0 ;x<keepAmount;x++){
-        if(x >= goodCount){
-            if(outId+x < pruneAmountTotal){
-                out[outId+x] = my_local_agents[bad[x-goodCount]];
-            }
-            continue;
+    if(pruneId >= pruneAmountTotal){
+       //randomPrunePerThread*newCount/apt
+        if(((count/(apt)) * aptP) - pruneId  >= apt){
+
+                for(int x = 0;x<apt;x++){
+                    //printf("Prune ID %i\n",pruneId);
+                    out[outId+x] = my_local_agents[x];
+                }
+            
         }
-        if(outId+x < pruneAmountTotal){
-            out[outId+x] = my_local_agents[good[x]];
+    }
+    else{
+        for(int x =0 ;x<keepAmount;x++){
+            if(x >= goodCount){
+                if(outId+x < pruneAmountTotal){
+                    out[outId+x] = my_local_agents[bad[x-goodCount]];
+                    //printf("Out")
+                }
+                continue;
+            }
+            if(outId+x < pruneAmountTotal){
+                out[outId+x] = my_local_agents[good[x]];
+            }
         }
     }
     if(mainId == 0)
@@ -287,14 +300,24 @@ void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune, Pr
         memcpy(out,agents,sizeof(Agent) * count);
         return;
     }
+
+    // for(int x = 0;x<count;x++){
+    //     printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",agents[x].positionX,agents[x].positionY,agents[x].velocity,agents[x].height,properties.gravity,properties.friction);
+    // }
     int apt = 16;
     int threadCount = 512;
-    int amountToAdd = (count)%(threadCount/apt);
+    //34816
+    int newCount = count - (count)%(threadCount);
+    int remainderCount = (count)%(threadCount);
+    //4
+    int gridNumber = (int)ceil(((float)(newCount)/((float)threadCount*(float)apt)));
+
+    //13.6
+    int randomPrunePerThread = ceil((float)amountToPrune/((float)newCount/(float)apt));
+    int remainderPrune = amountToPrune%(newCount/apt);
+
     
-    int gridNumber = (int)ceil(((float)(count+amountToAdd)/((float)apt)*(float)threadCount));
-    int randomPerThread = (count+amountToAdd)/threadCount/pow(gridNumber,2);
-    
-    dim3 DimGrid(gridNumber,gridNumber,1);
+    dim3 DimGrid(gridNumber,1,1);
     dim3 DimBlock(threadCount,1,1);
 
     Agent* in_d;
@@ -309,12 +332,25 @@ void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune, Pr
 
     cudaMemcpy(in_d,agents,count*sizeof(Agent),cudaMemcpyHostToDevice);
 
-    printf("Grid Number: %i, APT: %i, APT_P: %i, AmountToAdd: %i, Count: %ld\n",gridNumber,apt,randomPerThread,amountToAdd,count);
-    PruneGPU<<<DimGrid,DimBlock>>>(in_d,out_d,count,(count-amountToPrune),apt,randomPerThread);
+    printf("Grid Number: %i,newCount: %i, remainderCount:%i, APT: %i, APT_P: %i,APT_P*NumThreads:%i, Count: %ld, total amount to prune %ld\n",gridNumber,newCount,remainderCount, apt,randomPrunePerThread,randomPrunePerThread*newCount/apt,count,amountToPrune);
+    PruneGPU<<<DimGrid,DimBlock>>>(in_d,out_d,newCount,(amountToPrune),apt,randomPrunePerThread);
     cudaDeviceSynchronize();
     cudaMemcpy(out,out_d,(count-amountToPrune)*sizeof(Agent),cudaMemcpyDeviceToHost);
     cudaFree(in_d);
     cudaFree(out_d);
+    //were missing remainder count
+    //do serial prune
+    int outIndex = newCount - amountToPrune;
+    int inIndex = newCount;
+    for(int x = 0;x<remainderCount;x++){
+         //printf("Out position x:%i %f,%f\n",outIndex - remainderCount,out[outIndex - remainderCount].positionX,out[outIndex - remainderCount].positionX);
+        out[outIndex++] = agents[x+inIndex];
+       
+    }
+
+    // for(int x = 0;x<count-amountToPrune;x++){
+    //     printf("PositionX, %f, PositionY %f, Velocity %f, height %f, gravity %f, friciton %f\n",out[x].positionX,out[x].positionY,out[x].velocity,out[x].height,properties.gravity,properties.friction);
+    // }
 }
 
 
