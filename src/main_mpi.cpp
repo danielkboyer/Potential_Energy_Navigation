@@ -265,7 +265,7 @@ int main(int argc, char* argv[]){
             delete[] a_loc;
             
             // Do the actual pruning on each thread on the chunk they have been given
-            utility->Prune(a_agent_loc, b_agent_loc, aLength_loc, long(pruneAmount_l));
+            utility->Prune(a_agent_loc, b_agent_loc, aLength_loc, long(pruneAmount_l),properties);
 
             struct agent_type* b_loc = new struct agent_type[aLength_loc - pruneAmount_l];
             // convert the agent b_loc to struct for gathering with MPI
@@ -324,7 +324,7 @@ int main(int argc, char* argv[]){
             //printf("Percentage of negative velocities %f\n",b[0].percentage);
             if(b[0].percentage > (((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)) && (b[0].percentage!=0)){
                 serialPrune = 1;
-                printf("activating serial prune from rank: %i\n", my_rank);
+                //printf("activating serial prune from rank: %i\n", my_rank);
             }
             else {
                 serialPrune = 0;
@@ -346,7 +346,7 @@ int main(int argc, char* argv[]){
                     maxDY = b[x].positionY;
                 }
             }
-            printf("Max Distance is %f, at (%f,%f) from rank %i \n",maxDistance,maxDX,maxDY, my_rank); 
+            //printf("Max Distance is %f, at (%f,%f) from rank %i \n",maxDistance,maxDX,maxDY, my_rank); 
         }
         
         //**********START STEP ALL***********//
