@@ -9,7 +9,7 @@ MPI = false
 GPUNAME = GPU_Util.cpp
 MAINFILE = main
 IS_MPI = false
-
+OMP = false
 AGENT_TYPE = cpp
 ifeq ($(MPI),true)
 MAINFILE = main_mpi

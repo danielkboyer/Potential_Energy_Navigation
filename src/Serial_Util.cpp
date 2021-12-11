@@ -8,6 +8,8 @@
 #include "Serial_Util.h"
 #include "random"
 #include "math.h"
+#include "string.h"
+#include "timer.h"
 int intRandSerial(const int & min, const int & max) {
     static thread_local std::mt19937 generator;
     std::uniform_int_distribution<int> distribution(min,max);
@@ -18,16 +20,37 @@ void SwapValueSerial(Agent &a, Agent &b) {
    a = b;
    b = t;
 }
-
-void ShuffleSerial(Agent* agents, int count){
-
-    for(int x = 0;x<count;x++){
+#if OMP == false
+void ShuffleSerial(Agent* agents, int count,int threadCount){
+      for(int x = 0;x<count;x++){
         int index1 = intRandSerial(0,count-1);
         int index2 = intRandSerial(0,count-1);
         SwapValueSerial(agents[index1],agents[index2]);
     }
 }
+#else
+void ShuffleSerial(Agent* agents, int count,int threadCount){
+    int x = 0;
+    int perThread = floor(count/threadCount);
+#pragma omp parallel num_threads(threadCount) default(none) private(x) shared(perThread,count,agents,threadCount)
+{
+    int myRank = omp_get_thread_num();
+    int min = myRank*perThread;
+    int max = min+perThread-1;
+    if(myRank == threadCount-1){
+        max = threadCount-1;
+    }
 
+    for(x = min;x<max;x++){
+        int index1 = intRandSerial(min,max);
+        int index2 = intRandSerial(min,max);
+        SwapValueSerial(agents[index1],agents[index2]);
+    }
+
+
+}
+}
+#endif
 void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Properties properties, Map map){
     int x, y, aIndex;
     float newDirection;
@@ -110,48 +133,76 @@ void Serial_Util::StepAll(Agent* in, int inCount, Agent* out, int outCount, Prop
 
 // created from GPU
 void Serial_Util::Prune(Agent* agents, Agent* out, long count, long amountToPrune,Properties properties){
+
+    if(amountToPrune == 0){
+        memcpy(out,agents,sizeof(Agent) * count);
+        return;
+    }
+
     long keepAmount = count - amountToPrune;
 
-    ShuffleSerial(agents,count);
+    ShuffleSerial(agents,count,properties.threadCount);
+    // for(int x = 0;x<count;x++){
+    //     printf("check agent: %f,%f\n",agents[x].positionX,agents[x].positionY);
+    // }
     int* good = new int[count];
     int* bad = new int[count];
-    int goodCount = 0;
-    int badCount = 0;
     int x;
-
+    int badCount = 0;
+double first_prune=0;
+double second_prune = 0;
+double first_end = 0;
+double second_end = 0;
+GET_TIME(first_prune);
+#pragma omp parallel num_threads(properties.threadCount) default(none) private(x) shared(out,amountToPrune,keepAmount,count,agents,good,bad) reduction(+:badCount)
+{
+#   pragma omp for 
     for(x = 0;x<count;x++){
         if(isnan(agents[x].velocity) || agents[x].velocity <= 0 || agents[x].pruned == true){
             agents[x].pruned = true;
-            bad[badCount++] = x;
+            bad[x] = x;
+            good[x] = -1;
+            badCount+=1;
         }
         else{
-            good[goodCount++] = x;
+            bad[x] = -1;
+            good[x] = x;
         }
     }
+}
+GET_TIME(first_end);
+GET_TIME(second_prune)
 
-// make this for loop parallel
-#   pragma omp parallel for num_threads(properties.threadCount) default(none) private(x) shared(agents,out,goodCount,amountToPrune,keepAmount,good,bad)
-    for(x =0 ;x<keepAmount;x++){
-        //printf("loop 3 parrallel or not %d \n", omp_get_num_threads());
-        if(goodCount <=x ){
-            if (x < amountToPrune) {
-                out[x] = agents[ bad[x-goodCount] ];
-            }
-            else if (amountToPrune == 0){
-                out[x] = agents[x];
-            }
-        }
-        else if (x < amountToPrune){
-            out[x] = agents[good[x]];
-
-        }
-        else if (amountToPrune == 0){
-            out[x] = agents[x];
-        }
+int index = 0;
+for(int x = 0;x<keepAmount;x++){
+    if(good[x] != -1){
+        out[index++] = agents[good[x]];
     }
+}
+
+for(int x = 0;index<keepAmount;x++){
+    if(bad[x] != -1)
+        out[index++] = agents[bad[x]];
+}
+
+// for(int x = 0;x<keepAmount;x++){
+//         printf("New check agent: %f,%f\n",out[x].positionX,out[x].positionY);
+//     }
+GET_TIME(second_end);
+// #   pragma omp for
+//     for(int x = 0;x<count;x++){
+//         if(bad[x] != -1)
+//             badCount += 1;
+//     }
+
+
+
+//printf("Prune time 1 %f\n",first_end-first_prune);
+//printf("Prune time 2 %f\n",second_end-second_prune);
+//printf("badCount %i\n",badCount);
 
     out[0].percentage = ((float)(badCount))/(float)count;
-    printf("good count %i, bad count %i, amount to keep %i, and ammount to prune %i\n", goodCount, badCount,keepAmount,amountToPrune);
+    //printf("good count %i, bad count %i, amount to keep %i, and ammount to prune %i\n", goodCount, badCount,keepAmount,amountToPrune);
     delete[] good;
     delete[] bad;
 }

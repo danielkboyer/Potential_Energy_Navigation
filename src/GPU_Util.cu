@@ -229,7 +229,7 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
     int x_t = threadIdx.x;
     long keepAmount = apt - aptP;
     int mainId = ((x_b * 512)+(y_b*x*512)+x_t)*apt;
-    if(mainId < count){
+    if(mainId >= count){
         return;
     }
     int outId = ((x_b * 512)+(y_b*x*512)+x_t)*keepAmount;
@@ -245,7 +245,6 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
             my_local_agents[x] = dummy;
         }
     }
-
     ShuffleGPU(my_local_agents,apt,mainId);
     int* good = new int[apt];
     int* bad = new int[apt];
@@ -257,22 +256,23 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
             bad[badCount++] = x;
         }
         else{
-            bad[goodCount++] = x;
+            good[goodCount++] = x;
         }
     }
     
     for(int x =0 ;x<keepAmount;x++){
         if(x >= goodCount){
-            if(mainId+x < pruneAmountTotal){
+            if(outId+x < pruneAmountTotal){
                 out[outId+x] = my_local_agents[bad[x-goodCount]];
             }
             continue;
         }
-        if(mainId+x < pruneAmountTotal){
+        if(outId+x < pruneAmountTotal){
             out[outId+x] = my_local_agents[good[x]];
         }
     }
-    out[outId].percentage = ((float)(badCount))/(float)apt;
+    if(mainId == 0)
+        out[outId].percentage = ((float)(badCount))/(float)apt;
     delete[] my_local_agents;
     delete[] good;
     delete[] bad;
@@ -282,14 +282,20 @@ __global__ void PruneGPU(Agent* agents,Agent* out,long count,long pruneAmountTot
 
 void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune, Properties properties){
 
+
+    if(amountToPrune == 0){
+        memcpy(out,agents,sizeof(Agent) * count);
+        return;
+    }
     int apt = 16;
-    int amountToAdd = count%512;
+    int threadCount = 512;
+    int amountToAdd = (count)%(threadCount/apt);
     
-    int gridNumber = (int)ceil(((float)(count+amountToAdd)/(float)apt)/(float)512);
-    int randomPerThread = (count+amountToAdd)/512/pow(gridNumber,2);
-    //printf("Grid Number: %i\n",gridNumber);
+    int gridNumber = (int)ceil(((float)(count+amountToAdd)/((float)apt)*(float)threadCount));
+    int randomPerThread = (count+amountToAdd)/threadCount/pow(gridNumber,2);
+    
     dim3 DimGrid(gridNumber,gridNumber,1);
-    dim3 DimBlock(512,1,1);
+    dim3 DimBlock(threadCount,1,1);
 
     Agent* in_d;
     Agent* out_d;
@@ -299,10 +305,11 @@ void GPU_Util::Prune(Agent* agents,Agent* out,long count, long amountToPrune, Pr
     cudaMalloc((void **)&in_d,count*sizeof(Agent));
 
     
-    cudaMemcpy(out_d,&out,sizeof(Agent)*(count-amountToPrune),cudaMemcpyHostToDevice);
+    cudaMemcpy(out_d,out,sizeof(Agent)*(count-amountToPrune),cudaMemcpyHostToDevice);
 
     cudaMemcpy(in_d,agents,count*sizeof(Agent),cudaMemcpyHostToDevice);
 
+    printf("Grid Number: %i, APT: %i, APT_P: %i, AmountToAdd: %i, Count: %ld\n",gridNumber,apt,randomPerThread,amountToAdd,count);
     PruneGPU<<<DimGrid,DimBlock>>>(in_d,out_d,count,(count-amountToPrune),apt,randomPerThread);
     cudaDeviceSynchronize();
     cudaMemcpy(out,out_d,(count-amountToPrune)*sizeof(Agent),cudaMemcpyDeviceToHost);

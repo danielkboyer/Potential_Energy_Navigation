@@ -119,17 +119,17 @@ int main(int argc, char* argv[]){
 			//printf("Amount to prune: %ld\n",amountToPrune);
 			bLength = aLength - amountToPrune;
 			b = new Agent[bLength];
-			printf("starting prune amountToPrune: %ld\n",amountToPrune);
+			//printf("starting prune amountToPrune: %ld\n",amountToPrune);
 			utility->Prune(a,b, aLength, long(amountToPrune), properties);
 			
-			printf("Percentage of negative velocities %f\n",b[0].percentage);
+			//printf("Percentage of negative velocities %f\n",b[0].percentage);
 			if(b[0].percentage >= ((float)numberOfDirectionSpawn-1)/((float)numberOfDirectionSpawn)){
 				serialPrune = true;
 			}
 		}
 		else{
 
-			printf("Serial prune\n");
+			//printf("Serial prune\n");
 			vector<int> good;
 			for(int x = 0;x<aLength;x++){
 				if(a[x].pruned == false){
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]){
 			{
 				serialPrune = false;
 			}
-			printf("B Length Serial %i \n",bLength);
+			//printf("B Length Serial %i \n",bLength);
 
 		}
 		GET_TIME(end_prune_time);
@@ -159,13 +159,14 @@ int main(int argc, char* argv[]){
 		for(int x = 0;x<bLength;x++){ 
 			// Find which location has the max and what the max is
 			if(b[x].DistanceFrom(properties.agentStartX,properties.agentStartY) > maxDistance){
-				maxDistance = b[x].DistanceFrom(properties.agentStartX,properties.agentStartY);
-				maxDX = b[x].positionX;
-				maxDY = b[x].positionY;
+				maxDistance = float(b[x].DistanceFrom(properties.agentStartX,properties.agentStartY));
+				maxDX = float(b[x].positionX);
+				maxDY = float(b[x].positionY);
+				//printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 			}
 			
 		}
-		printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
+		//printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 		//printf("Max Distance is %f, at (%f,%f)\n",maxDistance,maxDX,maxDY);
 		//Write to file here, this is probbaly the same for each implimentation
 		fileWriter.Write(b,startAgentId);
@@ -187,9 +188,8 @@ int main(int argc, char* argv[]){
 		delete[] b;
 		loopAmount++;
 
-		// if(loopAmount == 5){
-		// 	return 0;
-		// }
+	
+
 	}
 	GET_TIME(end_total_time);
 	elapsed_total_time = end_total_time-start_total_time;
